@@ -116,6 +116,7 @@ nav{position:fixed;bottom:0;width:100%;background:rgba(255,255,255,.95);backdrop
 <div style="display:flex;gap:4px">
 <button class="sync-btn" id="pullBtn" onclick="pullFromSheet(true)" title="Daten vom Sheet laden">⬇ Pull</button>
 <button class="sync-btn" id="syncBtn" onclick="syncData()" title="Daten ins Sheet schreiben"><span class="sync-dot" id="syncDot"></span><span id="syncLabel">Sync</span></button>
+<button class="sync-btn" onclick="resetScriptUrl()" title="Script-URL ändern" style="font-size:9px">⚙️</button>
 </div>
 </header>
 
@@ -244,8 +245,20 @@ window.addEventListener('DOMContentLoaded',async()=>{
   }
 });
 function saveLocal(){localStorage.setItem('lnx_db',JSON.stringify(DB));dirty=true;updateDot()}
-function saveSetup(){const u=document.getElementById('setupUrl').value.trim();if(!u)return;scriptUrl=u;localStorage.setItem('lnx_url',u);document.getElementById('setupOverlay').style.display='none';gasGet('init').then(()=>syncData()).then(()=>renderAll())}
+function saveSetup(){
+  const u=document.getElementById('setupUrl').value.trim();if(!u)return;
+  scriptUrl=u;localStorage.setItem('lnx_url',u);
+  document.getElementById('setupOverlay').style.display='none';
+  // NEVER sync on setup — always pull first to get existing sheet data
+  gasGet('init').then(()=>pullFromSheet(false)).then(()=>renderAll()).catch(()=>renderAll());
+}
 function skipSetup(){document.getElementById('setupOverlay').style.display='none';renderAll()}
+function resetScriptUrl(){
+  if(!confirm('Script-URL zurücksetzen und neu verbinden?'))return;
+  scriptUrl='';localStorage.removeItem('lnx_url');
+  document.getElementById('setupUrl').value='';
+  document.getElementById('setupOverlay').style.display='flex';
+}
 
 // ═══════════════ SYNC (CORS-free) ═══════════════
 // POST via hidden form+iframe (avoids CORS completely)
@@ -299,10 +312,10 @@ function gasGet(action){
 
 async function syncData(){
   if(!scriptUrl){updateDot();return}
-  // Safety: never sync if local DB is completely empty
   const totalEntries=DB.batteryTypes.length+DB.devices.length+DB.areas.length+DB.locations.length;
   if(totalEntries===0){
-    if(confirm('Lokale Daten sind leer. Soll stattdessen vom Sheet geladen werden?')){pullFromSheet(true)}
+    const doPull=confirm('Lokale Daten sind leer.\n\n"OK" = Daten vom Sheet laden (empfohlen)\n"Abbrechen" = Nichts tun\n\n⚠️ Sync mit leeren Daten wird verhindert.');
+    if(doPull)pullFromSheet(true);
     return;
   }
   const btn=document.getElementById('syncBtn'),lbl=document.getElementById('syncLabel');
