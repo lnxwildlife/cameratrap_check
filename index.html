@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, user-scalable=no" name="viewport"/>
+<title>LNX Cameratrap Check</title>
+<link rel="manifest" href="manifest.json"/>
+<meta name="theme-color" content="#4CAF50"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<link rel="apple-touch-icon" href="icon.png"/>
+<style>
+:root { --primary: #4CAF50; --primary-light: rgba(76,175,80,0.1); --on-primary: #fff; --surface: #fff; --sf2: #f3f3f3; --sf3: #f9f9f9; --on-s: #1a1c1c; --on-sv: #666; --ol: #e0e0e0; --r: 0.75rem; --danger: #f44336; --warn: #FF9800; --info: #2196F3; }
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--surface);color:var(--on-s);line-height:1.5;overflow-x:hidden}
+header{position:fixed;top:0;width:100%;background:var(--surface);padding:.75rem 1rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--ol);z-index:100}
+.logo-area{display:flex;align-items:center;gap:8px}
+.logo-icon{width:32px;height:32px;background:var(--primary);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px}
+.logo-text{font-size:.85rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+.logo-sub{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--on-sv)}
+.sync-btn{background:none;border:1px solid var(--ol);border-radius:8px;padding:6px 10px;font-size:10px;font-weight:700;color:var(--primary);cursor:pointer;text-transform:uppercase;letter-spacing:.04em;display:flex;align-items:center;gap:4px}
+.sync-btn.syncing{opacity:.5;pointer-events:none}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--primary)}
+.sync-dot.offline{background:var(--danger)}.sync-dot.pending{background:var(--warn)}
+.offline-bar{display:none;background:var(--warn);color:#fff;text-align:center;font-size:11px;font-weight:700;padding:4px;letter-spacing:.04em}
+.content{padding:68px 0 80px;max-width:600px;margin:0 auto}
+.page{display:none;padding:.75rem}.page.active{display:block}
+section{background:var(--sf2);border-radius:1rem;padding:1.25rem;margin-bottom:.75rem}
+.sec-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem}
+.sec-title{display:flex;align-items:center;gap:8px;font-weight:700;font-size:1rem}
+.sec-icon{color:var(--primary)}
+.tile{background:#fff;border-radius:var(--r);padding:.85rem;margin-bottom:.5rem}.tile:last-child{margin-bottom:0}
+.tile-head{display:flex;justify-content:space-between;align-items:center}
+.tile-t{font-weight:600;font-size:14px}.tile-sub{font-size:11px;color:var(--on-sv);margin-top:2px}
+.tile-acts{display:flex;gap:6px}
+.badge{background:var(--primary-light);color:var(--primary);font-size:9px;font-weight:800;text-transform:uppercase;padding:3px 8px;border-radius:100px;letter-spacing:.04em;display:inline-block;margin:2px 2px 2px 0}
+.badge.amber{background:rgba(255,152,0,.1);color:#E65100}.badge.teal{background:rgba(0,150,136,.1);color:#00796B}
+.badge.red{background:rgba(244,67,54,.1);color:var(--danger)}.badge.count{background:var(--primary);color:#fff;min-width:20px;text-align:center}
+.fl{font-size:10px;font-weight:800;text-transform:uppercase;color:var(--on-sv);margin-bottom:6px;display:block;letter-spacing:.05em}
+input[type="text"],input[type="number"],textarea,select{width:100%;padding:.7rem;border:1px solid var(--ol);background:var(--sf3);border-radius:.5rem;font-size:14px;outline:none;color:var(--on-s);font-family:inherit}
+textarea{resize:vertical;min-height:60px}input:focus,textarea:focus{border-color:var(--primary)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:.7rem 1rem;border-radius:.5rem;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.04em;cursor:pointer;border:none;transition:all .15s;font-family:inherit}
+.btn-p{background:var(--primary);color:#fff;box-shadow:0 2px 8px rgba(76,175,80,.2);width:100%;padding:.85rem}.btn-p:active{transform:scale(.98)}
+.btn-sm{padding:.4rem .7rem;font-size:10px}.btn-o{background:none;border:1px solid var(--ol);color:var(--on-s)}.btn-o:active{background:var(--sf2)}
+.btn-d{background:none;border:1px solid rgba(244,67,54,.2);color:var(--danger)}.btn-g{background:none;border:none;color:var(--primary)}
+.check-row{display:flex;align-items:center;gap:10px}
+.chk{width:24px;height:24px;border-radius:6px;border:2px solid var(--ol);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .15s;font-size:14px}
+.chk.on{background:var(--primary);border-color:var(--primary);color:#fff}.chk.sm{width:20px;height:20px;font-size:12px}
+.chip{display:inline-flex;align-items:center;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--ol);background:var(--surface);margin:3px;transition:all .15s}
+.chip.on{border-color:var(--primary);background:var(--primary-light);color:var(--primary)}
+.chip.dng{border-color:rgba(244,67,54,.3);background:rgba(244,67,54,.05);color:var(--danger)}.chip.dng.on{background:rgba(244,67,54,.12);border-color:var(--danger)}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.qty-ctrl{display:flex;align-items:center;gap:8px}
+.qty-btn{width:30px;height:30px;border-radius:8px;border:1px solid var(--ol);background:var(--surface);color:var(--on-s);font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.qty-val{font-size:18px;font-weight:800;color:var(--primary);min-width:28px;text-align:center}
+.empty{text-align:center;padding:2rem 1rem;color:var(--on-sv)}.empty-i{font-size:2rem;margin-bottom:.5rem}.empty-t{font-size:13px}
+.flex-b{display:flex;justify-content:space-between;align-items:center}
+.mt-3{margin-top:.75rem}.mt-4{margin-top:1rem}.mb-3{margin-bottom:.75rem}.w-full{width:100%}
+.prog-bar{height:4px;background:var(--ol);border-radius:2px;overflow:hidden;margin-top:6px}
+.prog-fill{height:100%;background:var(--primary);border-radius:2px;transition:width .3s}
+.batt-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--ol)}.batt-row:last-child{border-bottom:none}
+.batt-count{font-size:22px;font-weight:800;color:var(--primary)}
+.mat-card{border-left:3px solid var(--warn)}.mat-card.resolved{border-left-color:var(--primary);opacity:.5}
+/* Photo */
+.photo-area{margin:.75rem 0}
+.photo-preview{width:100%;max-height:200px;object-fit:cover;border-radius:.5rem;border:1px solid var(--ol)}
+.photo-thumb{width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid var(--ol);flex-shrink:0;cursor:pointer}
+.photo-btns{display:flex;gap:6px;margin-top:6px}
+.gps-info{font-size:10px;color:var(--primary);margin-top:4px;font-family:monospace}
+.coord-label{font-size:9px;color:var(--on-sv);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+/* Modal */
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;display:none;align-items:flex-end;justify-content:center}
+.mo.open{display:flex}
+.modal{width:100%;max-width:600px;max-height:85vh;background:var(--surface);border-radius:1rem 1rem 0 0;overflow:hidden;display:flex;flex-direction:column}
+.m-head{display:flex;justify-content:space-between;align-items:center;padding:1rem;border-bottom:1px solid var(--ol)}
+.m-title{font-weight:700;font-size:1rem}
+.m-close{width:32px;height:32px;border-radius:8px;border:none;background:var(--sf2);cursor:pointer;font-size:16px;color:var(--on-sv)}
+.m-body{padding:1rem;overflow-y:auto;flex:1}
+/* Setup */
+.setup{position:fixed;inset:0;background:var(--surface);z-index:300;display:flex;align-items:center;justify-content:center}
+.setup-box{max-width:400px;padding:2rem;text-align:center}
+/* Nav */
+nav{position:fixed;bottom:0;width:100%;background:rgba(255,255,255,.95);backdrop-filter:blur(10px);display:flex;justify-content:space-around;padding:8px 0 max(env(safe-area-inset-bottom),12px) 0;border-top:1px solid var(--ol);z-index:100}
+.nav-i{display:flex;flex-direction:column;align-items:center;color:var(--on-sv);font-size:9px;font-weight:700;text-transform:uppercase;gap:3px;cursor:pointer;padding:4px 8px;border:none;background:none;letter-spacing:.03em}
+.nav-i.active{color:var(--primary)}.nav-i svg{width:22px;height:22px}
+.acc-arrow{font-size:12px;color:var(--on-sv);transition:transform .2s;display:inline-block;margin-left:4px}
+.acc-arrow.open{transform:rotate(90deg)}
+.status-badge{display:inline-block;padding:2px 8px;border-radius:100px;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+.status-planned{background:rgba(33,150,243,.15);color:#1565C0}
+.status-active{background:rgba(76,175,80,.15);color:#2E7D32}
+.status-inactive{background:rgba(100,100,100,.15);color:#555}
+.mat-manual{border-left-color:#9C27B0}
+</style>
+</head>
+<body>
+
+<!-- OFFLINE INDICATOR -->
+<div class="offline-bar" id="offlineBar">📵 Offline — Daten werden lokal gespeichert</div>
+
+<!-- SETUP -->
+<div class="setup" id="setupOverlay" style="display:none">
+<div class="setup-box">
+    <div style="font-size:3rem;margin-bottom:1rem">🦡</div>
+    <h2 style="margin-bottom:.5rem">LNX Trailcam Check</h2>
+    <p style="font-size:13px;color:var(--on-sv);margin-bottom:1.5rem">Verbinde die App mit deinem Google Sheet.<br>Füge die Apps Script Web-App URL ein:</p>
+    <input type="text" id="setupUrl" placeholder="https://script.google.com/macros/s/..." style="margin-bottom:.75rem;font-size:13px">
+    <button class="btn btn-p" onclick="saveSetup()">Verbinden</button>
+    <p style="font-size:10px;color:var(--on-sv);margin-top:1rem">URL wird lokal gespeichert.</p>
+    <button class="btn btn-g mt-3" onclick="skipSetup()" style="font-size:11px">Ohne Google Sheets (nur lokal)</button>
+</div>
+</div>
+
+<!-- HEADER -->
+<header>
+<div class="logo-area"><div class="logo-icon" style="background:transparent;padding:0"><img src="data:image/png;base64,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" style="width:36px;height:36px;border-radius:8px"></div><div><div class="logo-text">Cameratrap Check</div><div class="logo-sub">Field Check System</div></div></div>
+<div style="display:flex;gap:4px">
+<button class="sync-btn" id="pullBtn" onclick="pullFromSheet(true)" title="Daten vom Sheet laden">⬇ Pull</button>
+<button class="sync-btn" id="syncBtn" onclick="syncData()" title="Daten ins Sheet schreiben"><span class="sync-dot" id="syncDot"></span><span id="syncLabel">Sync</span></button>
+</div>
+</header>
+
+<!-- CONTENT -->
+<div class="content">
+<div class="page" id="page-stammdaten">
+<section><div class="sec-head"><div class="sec-title"><span class="sec-icon">🔋</span> Batterietypen</div><button class="btn btn-sm btn-o" onclick="openModal('batt')">+ Typ</button></div><div id="battList"></div></section>
+<section><div class="sec-head"><div class="sec-title"><span class="sec-icon">🔍</span> Befundtypen</div><button class="btn btn-sm btn-o" onclick="openModal('finding')">+ Befund</button></div><div style="font-size:11px;color:var(--on-sv);margin-bottom:8px">Konfigurierbare Beobachtungen für den Feld-Check</div><div id="findingList"></div></section>
+<section>
+  <div class="sec-head"><div class="sec-title"><span class="sec-icon">📷</span> Geräte</div>
+  <div style="display:flex;gap:4px"><button class="btn btn-sm btn-o" onclick="openModal('dtype')">+ Gerätetyp</button><button class="btn btn-sm btn-o" onclick="openModal('device')">+ Gerät</button></div></div>
+  <div id="dtypeList" style="display:none"></div>
+  <div id="deviceList"></div>
+</section>
+</div>
+<div class="page" id="page-areas"><section><div class="sec-head"><div class="sec-title"><span class="sec-icon">🗺️</span> Gebiete & Standorte</div><button class="btn btn-sm btn-o" onclick="openModal('area')">+ Gebiet</button></div><div id="areaList"></div></section></div>
+<div class="page" id="page-check"><section><div class="sec-head"><div class="sec-title"><span class="sec-icon">🎒</span> Check vorbereiten</div></div><div id="checkAreaSel"></div></section><div id="checkBatt" style="display:none"></div><div id="checkMat" style="display:none"></div><div id="checkField" style="display:none"></div><div id="checkActs" style="display:none"></div></div>
+<div class="page" id="page-material">
+<section>
+  <div class="sec-head"><div class="sec-title"><span class="sec-icon">📦</span> Material & Aufgaben</div><button class="btn btn-sm btn-o" onclick="openModal('matAdd')">+ Eintrag</button></div>
+  <div id="matOpen"></div>
+</section>
+<section id="matDoneSec" style="display:none">
+  <div class="sec-head"><div class="sec-title" style="color:var(--on-sv)">Erledigt</div><button class="btn btn-sm btn-d" onclick="clearMat()">Löschen</button></div>
+  <div id="matDone"></div>
+</section>
+</div>
+<div class="page" id="page-history"><section><div class="sec-head"><div class="sec-title"><span class="sec-icon">📊</span> Check-History</div></div><div id="histList"></div></section></div>
+</div>
+
+<!-- MODAL -->
+<div class="mo" id="moOv" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()"><div class="m-head"><span class="m-title" id="moT"></span><button class="m-close" onclick="closeModal()">✕</button></div><div class="m-body" id="moB"></div></div></div>
+
+<!-- NAV -->
+<nav>
+<button class="nav-i active" data-p="stammdaten" onclick="showPage('stammdaten',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.63-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg><span>Stammdaten</span></button>
+<button class="nav-i" data-p="areas" onclick="showPage('areas',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"/></svg><span>Gebiete</span></button>
+<button class="nav-i" data-p="check" onclick="showPage('check',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg><span>Check</span></button>
+<button class="nav-i" data-p="material" onclick="showPage('material',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1 0-2 .9-2 2v3.01c0 .72.43 1.34 1 1.69V20c0 1.1 1.1 2 2 2h14c.9 0 2-.9 2-2V8.7c.57-.35 1-.97 1-1.69V4c0-1.1-1-2-2-2zm-5 12H9v-2h6v2zm5-7H4V4h16v3z"/></svg><span>Material</span></button>
+<button class="nav-i" data-p="history" onclick="showPage('history',this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg><span>History</span></button>
+</nav>
+
+<script>
+// ═══════════════ STATE ═══════════════
+let DB = { batteryTypes:[], findingTypes:[], deviceTypes:[], devices:[], areas:[], locations:[], history:[], material:[] };
+let checkAreas=[], checkLog={}, dirty=false;
+let openAreas=new Set(), openDtypes=new Set();
+let scriptUrl = localStorage.getItem('lnx_url')||'';
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const battName=(id)=>{const b=DB.batteryTypes.find(x=>x.id===id);return b?b.name:'?'};
+const dtName=(id)=>{const t=DB.deviceTypes.find(x=>x.id===id);return t?t.name:'?'};
+// Returns [{deviceId, qty, dev}] — migrates old formats automatically
+const locDevs=(loc)=>{
+  let a=loc.deviceAssignments;
+  if(!a){const ids=loc.deviceIds||(loc.deviceId?[loc.deviceId]:[]);a=ids.filter(Boolean).map(id=>({deviceId:id,qty:1}))}
+  return a.map(x=>({...x,dev:DB.devices.find(d=>d.id===x.deviceId)})).filter(x=>x.dev);
+};
+const devLabel=(d)=>{if(!d)return'?';return d.name||[d.manufacturer,d.model].filter(Boolean).join(' ')||'Unbenannt'};
+const locStatus=(loc)=>loc.status||'active';
+const locStatusLabel=(s)=>({planned:'🔵 Geplant',active:'🟢 Aktiv',inactive:'⚫ Inaktiv'}[s]||'🟢 Aktiv');
+const battAge=(dateStr)=>{
+  if(!dateStr)return null;
+  const days=Math.floor((Date.now()-new Date(dateStr).getTime())/86400000);
+  const date=new Date(dateStr).toLocaleDateString('de-CH');
+  const color=days>365?'var(--danger)':days>180?'var(--warn)':'#4CAF50';
+  const label=days===0?'Heute':days===1?'Gestern':days<30?`${days}d`:days<365?`${Math.round(days/30)}Mt`:`${Math.round(days/365)}J`;
+  return{date,days,label,color};
+};
+// batteryChangeDates: { deviceId: isoDate } stored on location
+const devBattDate=(loc,devId)=>{
+  const dates=loc.batteryChangeDates||{};
+  // fallback: old single lastBatteryChange if no per-device data yet
+  return dates[devId]||null;
+};
+const lastCheckedAge=(loc)=>{
+  if(!loc.lastChecked)return null;
+  const days=Math.floor((Date.now()-new Date(loc.lastChecked).getTime())/86400000);
+  return days===0?'Heute':days===1?'Gestern':days<30?`${days}d ago`:days<365?`${Math.round(days/30)} Mt ago`:`${Math.round(days/365)} J ago`;
+};
+const areaLocs=(aId)=>DB.locations.filter(l=>l.areaId===aId);
+const areaActiveLocs=(aId)=>DB.locations.filter(l=>l.areaId===aId&&locStatus(l)==='active');
+const esc=(s)=>{if(!s)return'';const d=document.createElement('div');d.textContent=s;return d.innerHTML};
+
+// ═══════════════ INIT ═══════════════
+window.addEventListener('DOMContentLoaded',async()=>{
+  // Register service worker for offline support
+  if('serviceWorker' in navigator){
+    try{await navigator.serviceWorker.register('sw.js')}catch(e){console.log('SW registration failed:',e)}
+  }
+  // Online/offline indicator
+  const bar=document.getElementById('offlineBar');
+  const updateOnline=()=>{bar.style.display=navigator.onLine?'none':'block';updateDot()};
+  window.addEventListener('online',updateOnline);
+  window.addEventListener('offline',updateOnline);
+  updateOnline();
+  const local=localStorage.getItem('lnx_db');
+  if(local)try{DB=JSON.parse(local)}catch{}
+  if(!DB.deviceTypes)DB.deviceTypes=[];
+  if(!DB.findingTypes)DB.findingTypes=[];
+  if(!DB.deviceTypes.length){DB.deviceTypes=[{id:uid(),name:'Trailcam'},{id:uid(),name:'DSLR Cameratrap'},{id:uid(),name:'Spypoint'},{id:uid(),name:'PIR Sensor'},{id:uid(),name:'Blitzgerät'},{id:uid(),name:'Sonstiges'}];saveLocal()}
+  if(!DB.findingTypes.length){DB.findingTypes=[
+    {id:uid(),name:'Blitz defekt/schwach'},{id:uid(),name:'Linse verschmutzt'},
+    {id:uid(),name:'Befestigung lose'},{id:uid(),name:'SD-Karte Problem'},
+    {id:uid(),name:'Feuchtigkeit/Beschlag'},{id:uid(),name:'Tierschaden/verschoben'},
+    {id:uid(),name:'Kamerawinkel verstellt'},{id:uid(),name:'Batterie-Kontakt'},
+    {id:uid(),name:'Defekt – Reparatur nötig'},{id:uid(),name:'Anderes'}
+  ];saveLocal()}
+  // Migrate devices that stored deviceType as name string → normalize to ID
+  let migrated=false;
+  DB.devices=DB.devices.map(d=>{
+    if(!d.deviceType)return d;
+    const byId=DB.deviceTypes.find(t=>t.id===d.deviceType);
+    if(byId)return d; // already ID
+    const byName=DB.deviceTypes.find(t=>t.name===d.deviceType);
+    if(byName){migrated=true;return{...d,deviceType:byName.id}}
+    return d;
+  });
+  if(migrated)saveLocal();
+  if(!scriptUrl&&!local){document.getElementById('setupOverlay').style.display='flex'}
+  else{
+    renderAll();
+    // Auto-pull only if local DB is empty — never overwrite existing local data automatically
+    const localTotal=DB.batteryTypes.length+DB.devices.length+DB.areas.length+DB.locations.length;
+    if(scriptUrl&&localTotal===0)pullFromSheet(false);
+    else updateDot();
+  }
+});
+function saveLocal(){localStorage.setItem('lnx_db',JSON.stringify(DB));dirty=true;updateDot()}
+function saveSetup(){const u=document.getElementById('setupUrl').value.trim();if(!u)return;scriptUrl=u;localStorage.setItem('lnx_url',u);document.getElementById('setupOverlay').style.display='none';gasGet('init').then(()=>syncData()).then(()=>renderAll())}
+function skipSetup(){document.getElementById('setupOverlay').style.display='none';renderAll()}
+
+// ═══════════════ SYNC (CORS-free) ═══════════════
+// POST via hidden form+iframe (avoids CORS completely)
+// GET via JSONP script injection (avoids CORS completely)
+
+function ensureIframe(){
+  let f=document.getElementById('_lnx_f');
+  if(!f){f=document.createElement('iframe');f.id='_lnx_f';f.name='_lnx_f';f.style.display='none';document.body.appendChild(f)}
+  return f;
+}
+
+function gasPost(action, data){
+  return new Promise((resolve, reject)=>{
+    // Strip photos to keep payload small
+    const clean={...data};
+    clean.locations=(clean.locations||[]).map(l=>{const c={...l};delete c.photo;return c});
+    const body=JSON.stringify(clean);
+    // Try fetch with no-cors first (works from file://, response not readable but request IS sent)
+    fetch(scriptUrl+'?action='+action, {
+      method:'POST',
+      mode:'no-cors',
+      headers:{'Content-Type':'text/plain'},
+      body:body
+    }).then(()=>resolve(true)).catch(()=>{
+      // Fallback: form+iframe, keep form in DOM until done
+      ensureIframe();
+      const form=document.createElement('form');
+      form.method='POST';form.action=scriptUrl+'?action='+action;form.target='_lnx_f';
+      const inp=document.createElement('input');inp.type='hidden';inp.name='data';inp.value=body;
+      form.appendChild(inp);document.body.appendChild(form);
+      form.submit();
+      // Remove form only after delay — immediate removal cancels submission on mobile
+      setTimeout(()=>{try{form.remove()}catch{}resolve(true)},3000);
+    });
+  });
+}
+
+function gasGet(action){
+  return new Promise((resolve,reject)=>{
+    const cb='_lnx_'+Date.now();
+    const timeout=setTimeout(()=>{delete window[cb];reject(new Error('Timeout'))},12000);
+    window[cb]=function(result){clearTimeout(timeout);delete window[cb];resolve(result)};
+    const s=document.createElement('script');
+    s.src=scriptUrl+'?action='+action+'&callback='+cb;
+    s.onerror=()=>{clearTimeout(timeout);delete window[cb];reject(new Error('Network error'))};
+    document.head.appendChild(s);
+    // Cleanup script tag after load
+    s.onload=()=>{setTimeout(()=>s.remove(),100)};
+  });
+}
+
+async function syncData(){
+  if(!scriptUrl){updateDot();return}
+  // Safety: never sync if local DB is completely empty
+  const totalEntries=DB.batteryTypes.length+DB.devices.length+DB.areas.length+DB.locations.length;
+  if(totalEntries===0){
+    if(confirm('Lokale Daten sind leer. Soll stattdessen vom Sheet geladen werden?')){pullFromSheet(true)}
+    return;
+  }
+  const btn=document.getElementById('syncBtn'),lbl=document.getElementById('syncLabel');
+  btn.classList.add('syncing');lbl.textContent='...';
+  try{
+    await gasPost('saveAll',DB);
+    dirty=false;lbl.textContent='OK ✓';setTimeout(()=>{lbl.textContent='Sync'},1500);
+  }catch(e){lbl.textContent='Fehler';setTimeout(()=>{lbl.textContent='Sync'},2000)}
+  btn.classList.remove('syncing');updateDot();
+}
+
+async function pullFromSheet(manual){
+  if(!scriptUrl){if(manual)alert('Kein Google Sheet verbunden. Bitte zuerst die Script-URL eingeben.');return}
+  const btn=document.getElementById('pullBtn');
+  if(btn){btn.textContent='⬇ ...';btn.classList.add('syncing')}
+  try{
+    const data=await gasGet('loadAll');
+    if(data&&data.batteryTypes!==undefined){
+      if(!data.deviceTypes)data.deviceTypes=[];
+      // If local has data and this is a manual pull, ask for confirmation
+      const localTotal=DB.batteryTypes.length+DB.devices.length+DB.areas.length+DB.locations.length;
+      const sheetTotal=(data.batteryTypes?.length||0)+(data.devices?.length||0)+(data.areas?.length||0)+(data.locations?.length||0);
+      if(manual&&localTotal>0&&sheetTotal>0){
+        if(!confirm('Lokale Daten ('+localTotal+' Einträge) werden durch Sheet-Daten ('+sheetTotal+' Einträge) überschrieben. Fortfahren?')){
+          if(btn){btn.textContent='⬇ Pull';btn.classList.remove('syncing')}return;
+        }
+      }
+      DB=data;
+      if(!DB.deviceTypes.length){DB.deviceTypes=[{id:uid(),name:'Trailcam'},{id:uid(),name:'DSLR Cameratrap'},{id:uid(),name:'Spypoint'},{id:uid(),name:'PIR Sensor'},{id:uid(),name:'Blitzgerät'},{id:uid(),name:'Sonstiges'}]}
+      saveLocal();dirty=false;updateDot();renderAll();
+      if(btn){btn.textContent='⬇ OK ✓';setTimeout(()=>{btn.textContent='⬇ Pull'},1500)}
+      if(manual){const n=DB.devices.length+DB.locations.length+DB.batteryTypes.length;
+        if(n>0)alert('✅ '+DB.batteryTypes.length+' Batterietypen, '+DB.devices.length+' Geräte, '+DB.areas.length+' Gebiete, '+DB.locations.length+' Standorte geladen.');
+        else alert('Sheet ist leer — noch keine Daten vorhanden.')}
+    }else{
+      if(btn){btn.textContent='⬇ Leer';setTimeout(()=>{btn.textContent='⬇ Pull'},1500)}
+      if(manual)alert('Keine Daten im Sheet gefunden.')
+    }
+  }catch(e){
+    if(btn){btn.textContent='⬇ Fehler';setTimeout(()=>{btn.textContent='⬇ Pull'},2000)}
+    if(manual)alert('Fehler beim Laden: '+e.message)
+  }
+  if(btn)btn.classList.remove('syncing');
+}
+
+function updateDot(){const d=document.getElementById('syncDot');if(!scriptUrl)d.className='sync-dot offline';else if(dirty)d.className='sync-dot pending';else d.className='sync-dot'}
+
+// ═══════════════ NAV ═══════════════
+function showPage(n,el){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById('page-'+n).classList.add('active');document.querySelectorAll('.nav-i').forEach(x=>x.classList.remove('active'));if(el)el.classList.add('active');renderPage(n)}
+function renderAll(){showPage('stammdaten',document.querySelector('[data-p="stammdaten"]'))}
+function renderPage(n){({stammdaten:()=>{renderBatt();renderFindings();renderDev()},areas:renderAreas,check:renderCheck,material:renderMat,history:renderHist})[n]?.()}
+
+// ═══════════════ BATTERIES ═══════════════
+function renderBatt(){
+  const el=document.getElementById('battList');
+  if(!el)return;
+  if(!DB.batteryTypes.length){el.innerHTML='<div class="empty"><div class="empty-i">🔋</div><div class="empty-t">Noch keine Batterietypen erfasst</div></div>';}
+  else{
+    el.innerHTML=DB.batteryTypes.map(b=>{const u=DB.devices.filter(d=>d.batteries.some(x=>x.typeId===b.id));
+      return`<div class="tile"><div class="tile-head"><div><div class="tile-t">${esc(b.name)}</div>${b.notes?`<div class="tile-sub">${esc(b.notes)}</div>`:''}
+      <div class="tile-sub">${u.length?'In: '+u.map(d=>esc(devLabel(d))).join(', '):'Noch nicht zugewiesen'}</div></div>
+      <div class="tile-acts"><button class="btn btn-sm btn-o" onclick="openModal('batt',DB.batteryTypes.find(x=>x.id==='${b.id}'))">✎</button>
+      <button class="btn btn-sm btn-d" onclick="delBatt('${b.id}')">✕</button></div></div></div>`}).join('');
+  }
+  renderFindings();
+}
+function renderFindings(){
+  const fEl=document.getElementById('findingList');
+  if(!fEl)return;
+  if(!DB.findingTypes||!DB.findingTypes.length){
+    fEl.innerHTML='<div class="empty" style="padding:1rem"><div class="empty-t">Noch keine Befundtypen</div></div>';
+    return;
+  }
+  fEl.innerHTML=DB.findingTypes.map(ft=>
+    `<div class="tile" style="margin-bottom:4px"><div class="flex-b">
+      <span style="font-size:13px">${esc(ft.name)}</span>
+      <div class="tile-acts">
+        <button class="btn btn-sm btn-o" onclick="openModal('finding',DB.findingTypes.find(x=>x.id==='${ft.id}'))">✎</button>
+        <button class="btn btn-sm btn-d" onclick="delFinding('${ft.id}')">✕</button>
+      </div>
+    </div></div>`).join('');
+}
+function delBatt(id){const u=DB.devices.filter(d=>d.batteries.some(x=>x.typeId===id));if(u.length){alert('Verwendet in: '+u.map(d=>devLabel(d)).join(', '));return}if(!confirm('Löschen?'))return;DB.batteryTypes=DB.batteryTypes.filter(b=>b.id!==id);saveLocal();renderBatt()}
+function delFinding(id){if(!confirm('Löschen?'))return;DB.findingTypes=DB.findingTypes.filter(f=>f.id!==id);saveLocal();renderFindings()}
+
+// ═══════════════ DEVICES ═══════════════
+function renderDev(){
+  // Device types as accordion groups
+  const el=document.getElementById('deviceList');
+  if(!DB.deviceTypes.length&&!DB.devices.length){el.innerHTML=`<div class="empty"><div class="empty-i">📷</div><div class="empty-t">Zuerst Batterietypen und Gerätetypen erfassen</div></div>`;document.getElementById('dtypeList').innerHTML='';return}
+  // Header area: add dtype button stays in section header (already there)
+  document.getElementById('dtypeList').innerHTML=''; // hide old inline badges
+  // Group devices by type, plus untyped
+  const groups=[];
+  DB.deviceTypes.forEach(dt=>{
+    const devs=DB.devices.filter(d=>d.deviceType===dt.id||d.deviceType===dt.name);
+    groups.push({id:dt.id,label:dt.name,devs,isDtype:true,dt});
+  });
+  const untyped=DB.devices.filter(d=>!d.deviceType||!DB.deviceTypes.find(t=>t.id===d.deviceType||t.name===d.deviceType));
+  if(untyped.length)groups.push({id:'_untyped',label:'Ohne Typ',devs:untyped,isDtype:false});
+  if(!DB.devices.length){el.innerHTML='<div class="empty"><div class="empty-i">📷</div><div class="empty-t">Noch keine Geräte erfasst</div></div>';return}
+  el.innerHTML=groups.filter(g=>g.devs.length>0||g.isDtype).map(g=>{
+    const isOpen=openDtypes.has(g.id);
+    const devHtml=g.devs.map(d=>{const lc=DB.locations.filter(l=>locDevs(l).some(a=>a.deviceId===d.id)).length;const typeName=DB.deviceTypes.find(t=>t.id===d.deviceType)?.name||'';const sub=[d.manufacturer,d.model].filter(Boolean).join(' · ');
+      return`<div class="tile" style="margin:4px 0;border-radius:8px"><div class="tile-head"><div><div class="tile-t">${esc(devLabel(d))}</div>${sub?`<div class="tile-sub">${esc(sub)}</div>`:''}${d.serial?`<div class="tile-sub" style="font-family:monospace;font-size:10px">SN: ${esc(d.serial)}</div>`:''}${d.notes?`<div class="tile-sub" style="margin-top:4px;font-style:italic">💬 ${esc(d.notes)}</div>`:''}
+      <div style="margin-top:4px">${d.batteries.map(b=>`<span class="badge amber">${b.qty}× ${esc(battName(b.typeId))}</span>`).join('')}${d.accessories.map(a=>`<span class="badge teal">${esc(a)}</span>`).join('')}</div>
+      <div class="tile-sub">An ${lc} Standort(en)</div></div>
+      <div class="tile-acts"><button class="btn btn-sm btn-o" onclick="openModal('device',DB.devices.find(x=>x.id==='${d.id}'))">✎</button>
+      <button class="btn btn-sm btn-d" onclick="delDev('${d.id}')">✕</button></div></div></div>`}).join('');
+    const dtActions=g.isDtype?`<button class="btn btn-sm btn-o" style="padding:3px 7px;font-size:10px" onclick="event.stopPropagation();openModal('dtype',DB.deviceTypes.find(t=>t.id==='${g.id}'))">✎</button><button class="btn btn-sm btn-d" style="padding:3px 7px;font-size:10px" onclick="event.stopPropagation();delDtype('${g.id}')">✕</button>`:'';
+    return`<div class="tile" style="padding:0;margin-bottom:6px">
+      <div onclick="toggleDtype('${g.id}')" style="padding:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="acc-arrow${isOpen?' open':''}">▶</span>
+          <span style="font-weight:700">${esc(g.label)}</span>
+          <span class="badge">${g.devs.length}</span>
+        </div>
+        <div style="display:flex;gap:4px">${dtActions}<button class="btn btn-sm btn-o" style="padding:3px 7px;font-size:10px" onclick="event.stopPropagation();openModal('device')">+ Gerät</button></div>
+      </div>
+      <div style="display:${isOpen?'block':'none'};border-top:${isOpen?'1px solid var(--ol)':'none'};padding:${isOpen?'8px':'0'}">
+        ${g.devs.length?devHtml:'<div class="tile-sub" style="padding:8px">Keine Geräte in diesem Typ</div>'}
+      </div>
+    </div>`;
+  }).join('');
+}
+function toggleDtype(id){if(openDtypes.has(id))openDtypes.delete(id);else openDtypes.add(id);renderDev()}
+function delDev(id){if(!confirm('Löschen?'))return;DB.devices=DB.devices.filter(d=>d.id!==id);DB.locations=DB.locations.map(l=>{if(l.deviceAssignments)return{...l,deviceAssignments:l.deviceAssignments.filter(a=>a.deviceId!==id)};const ids=(l.deviceIds||(l.deviceId?[l.deviceId]:[])).filter(x=>x!==id);return{...l,deviceIds:ids}});saveLocal();renderDev()}
+function delDtype(id){
+  const dt=DB.deviceTypes.find(t=>t.id===id);
+  const usedBy=DB.devices.filter(d=>d.deviceType===id||(dt&&d.deviceType===dt.name));
+  if(usedBy.length){alert('Wird noch verwendet in: '+usedBy.map(d=>devLabel(d)).join(', '));return}
+  if(!confirm('Löschen?'))return;
+  DB.deviceTypes=DB.deviceTypes.filter(t=>t.id!==id);saveLocal();renderDev();
+}
+
+// ═══════════════ AREAS ═══════════════
+function renderAreas(){
+  const el=document.getElementById('areaList');
+  if(!DB.areas.length){el.innerHTML='<div class="empty"><div class="empty-i">🗺️</div><div class="empty-t">Noch keine Gebiete erfasst</div></div>';return}
+  el.innerHTML=DB.areas.map(area=>{const locs=areaLocs(area.id);const isOpen=openAreas.has(area.id);
+    const activeCnt=locs.filter(l=>locStatus(l)==='active').length;
+    const plannedCnt=locs.filter(l=>locStatus(l)==='planned').length;
+    const inactiveCnt=locs.filter(l=>locStatus(l)==='inactive').length;
+    const countBadge=`<span class="badge">${activeCnt} aktiv</span>${plannedCnt?` <span class="badge" style="background:rgba(33,150,243,.15);color:#1565C0">${plannedCnt} geplant</span>`:''}${inactiveCnt?` <span class="badge" style="background:rgba(100,100,100,.15);color:#555">${inactiveCnt} inaktiv</span>`:''}`;
+    const locHtml=locs.map(loc=>{const ld=locDevs(loc);const st=locStatus(loc);
+      return`<div style="padding:.5rem .85rem;border-top:1px solid var(--ol);${st==='inactive'?'opacity:.5':''}">
+      <div style="display:flex;gap:10px;align-items:flex-start"><div style="flex:1">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-weight:500">${esc(loc.name)} <span class="status-badge status-${st}">${locStatusLabel(st)}</span></div>
+      ${loc.town?`<div class="tile-sub">📍 ${esc(loc.town)}</div>`:''}
+      ${loc.notes?`<div class="tile-sub" style="font-style:italic">💬 ${esc(loc.notes)}</div>`:''}
+      ${loc.lat&&loc.lng?`<div class="tile-sub" style="font-family:monospace;font-size:10px"><span class="coord-label">WGS84</span> ${esc(loc.lat)}, ${esc(loc.lng)}</div>`:''}
+      ${ld.length?ld.map(a=>'<div class="tile-sub">📷 '+(a.qty>1?a.qty+'× ':'')+esc(devLabel(a.dev))+(a.dev.serial?' <span style="font-family:monospace;font-size:9px">('+esc(a.dev.serial)+')</span>':'')+'</div>').join(''):'<div class="tile-sub"><span style="color:var(--warn)">⚠️ Kein Gerät</span></div>'}
+      ${(()=>{const battDevs=ld.filter(a=>a.dev.batteries&&a.dev.batteries.length>0);return battDevs.length?'<div style="margin-top:4px">'+battDevs.map(a=>{
+        const dateStr=devBattDate(loc,a.dev.id);const ba=battAge(dateStr);
+        return`<div style="font-size:11px;display:flex;align-items:center;gap:6px;padding:2px 0">
+          <span>🔋 ${a.qty>1?a.qty+'× ':''}${esc(devLabel(a.dev))}</span>
+          ${ba?`<span style="color:${ba.color};font-weight:700">${ba.label}</span><span style="opacity:.5;font-size:10px">(${ba.date})</span>`:`<span style="opacity:.4;font-size:10px">noch nie</span>`}
+        </div>`;}).join('')+'</div>':'';})()} 
+      ${loc.lastChecked?`<div class="tile-sub">✓ ${lastCheckedAge(loc)}</div>`:''}
+      <div class="tile-acts" style="margin-top:6px;justify-content:flex-start">
+        ${st==='planned'?`<button class="btn btn-sm btn-o" style="font-size:9px;color:var(--primary)" onclick="setLocStatus('${loc.id}','active')">✓ Aktivieren</button>`:''}
+        ${st==='active'?`<button class="btn btn-sm btn-o" style="font-size:9px" onclick="setLocStatus('${loc.id}','inactive')">⚫ Deaktivieren</button>`:''}
+        ${st==='inactive'?`<button class="btn btn-sm btn-o" style="font-size:9px;color:var(--primary)" onclick="setLocStatus('${loc.id}','active')">🟢 Reaktivieren</button>`:''}
+        <button class="btn btn-sm btn-o" style="font-size:9px" onclick="openModal('loc',DB.locations.find(l=>l.id==='${loc.id}'))">✎</button>
+        <button class="btn btn-sm btn-d" style="font-size:9px" onclick="archiveLoc('${loc.id}')">✕</button>
+      </div></div>
+      ${(()=>{const photos=loc.photos||(loc.photo?[loc.photo]:[]);return photos.length?'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">'+photos.map((p,i)=>`<img src="${p}" class="photo-thumb" onclick="showPhoto('${loc.id}',${i})">`).join('')+'</div>':'';})()} </div></div>`;
+    }).join('');
+    return`<div class="tile" style="padding:0;margin-bottom:6px">
+      <div onclick="toggleArea('${area.id}')" style="padding:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <span class="acc-arrow${isOpen?' open':''}">▶</span>
+          <span style="font-weight:700">${esc(area.name)}</span>
+          ${countBadge}
+        </div>
+        <div style="display:flex;gap:4px;flex-shrink:0">
+          <button class="btn btn-sm btn-o" style="padding:3px 7px;font-size:10px" onclick="event.stopPropagation();openModal('loc',null,'${area.id}')">+ Standort</button>
+          <button class="btn btn-sm btn-o" style="padding:3px 7px;font-size:10px" onclick="event.stopPropagation();openModal('area',${JSON.stringify(area).replace(/"/g,'&quot;')})">✎</button>
+          <button class="btn btn-sm btn-d" style="padding:3px 7px;font-size:10px" onclick="event.stopPropagation();delArea('${area.id}')">✕</button>
+        </div>
+      </div>
+      <div style="display:${isOpen?'block':'none'}">
+        ${locs.length?locHtml:'<div style="padding:.5rem .85rem;border-top:1px solid var(--ol)"><div class="tile-sub">Keine Standorte</div></div>'}
+      </div>
+    </div>`;
+  }).join('');
+}
+function toggleArea(id){if(openAreas.has(id))openAreas.delete(id);else openAreas.add(id);renderAreas()}
+function setLocStatus(id,st){DB.locations=DB.locations.map(l=>l.id===id?{...l,status:st}:l);saveLocal();renderAreas()}
+function archiveLoc(id){
+  const loc=DB.locations.find(l=>l.id===id);if(!loc)return;
+  if(confirm(`"${esc(loc.name)}" endgültig löschen?\n\nTipp: "⚫ Deaktivieren" behält den Standort in der Datenbank.`)){DB.locations=DB.locations.filter(l=>l.id!==id);saveLocal();renderAreas()}
+}
+function delArea(id){if(!confirm('Gebiet und alle Standorte löschen?'))return;DB.areas=DB.areas.filter(a=>a.id!==id);DB.locations=DB.locations.filter(l=>l.areaId!==id);saveLocal();renderAreas()}
+
+// ═══════════════ CHECK ═══════════════
+function renderCheck(){
+  const sel=document.getElementById('checkAreaSel');
+  if(!DB.areas.length){sel.innerHTML='<div class="empty"><div class="empty-i">🎒</div><div class="empty-t">Zuerst Gebiete erfassen</div></div>';return}
+  sel.innerHTML=DB.areas.map(a=>{const on=checkAreas.includes(a.id);const cnt=areaActiveLocs(a.id).length;return`<div class="tile" style="cursor:pointer${!cnt?';opacity:.5':''}" onclick="toggleCA('${a.id}')"><div class="check-row"><div class="chk${on?' on':''}">✓</div><div><div class="tile-t">${esc(a.name)}</div><div class="tile-sub">${cnt} aktive Standorte${areaLocs(a.id).length>cnt?' ('+( areaLocs(a.id).length-cnt)+' ausgeblendet)':''}</div></div></div></div>`}).join('');
+  if(!checkAreas.length){['checkBatt','checkMat','checkField','checkActs'].forEach(id=>document.getElementById(id).style.display='none');return}
+  // Battery summary — only active locs
+  const bt={};checkAreas.forEach(aId=>areaActiveLocs(aId).forEach(loc=>{locDevs(loc).forEach(a=>{a.dev.batteries.forEach(b=>{const n=battName(b.typeId);bt[n]=(bt[n]||0)+b.qty*a.qty})})}));
+  const bE=document.getElementById('checkBatt');bE.style.display='block';
+  bE.innerHTML=`<section><div class="sec-head"><div class="sec-title"><span class="sec-icon">🔋</span> Mitnehmen</div></div>${Object.keys(bt).length?Object.entries(bt).map(([t,q])=>`<div class="batt-row"><span>${esc(t)}</span><span class="batt-count">${q}</span></div>`).join(''):'<div class="tile-sub">Keine Geräte zugewiesen</div>'}</section>`;
+  // Pending material
+  const pend=DB.material.filter(m=>!m.resolved);const mE=document.getElementById('checkMat');
+  if(pend.length){mE.style.display='block';mE.innerHTML=`<section style="border-left:3px solid var(--warn)"><div class="sec-head"><div class="sec-title"><span class="sec-icon">⚠️</span> Offenes Material</div></div>${pend.map(m=>`<div class="tile-sub">${esc(m.locName)} — ${esc(m.issue)}</div>`).join('')}</section>`}else{mE.style.display='none'}
+  // Field checklist — every location fully expanded, mandatory
+  const fE=document.getElementById('checkField');fE.style.display='block';
+  const allLocs=checkAreas.flatMap(aId=>areaActiveLocs(aId));
+  const totalChecked=allLocs.filter(l=>checkLog[l.id]?.checked).length;
+  const allDone=totalChecked===allLocs.length&&allLocs.length>0;
+  fE.innerHTML=checkAreas.map(aId=>{const area=DB.areas.find(a=>a.id===aId);const locs=areaActiveLocs(aId);const cc=locs.filter(l=>checkLog[l.id]?.checked).length;
+    return`<section><div class="sec-head"><div class="sec-title">${esc(area?.name||'')}</div><span class="badge count">${cc}/${locs.length}</span></div>
+    <div class="prog-bar"><div class="prog-fill" style="width:${locs.length?Math.round(cc/locs.length*100):0}%"></div></div>
+    <div class="mt-3">${locs.map(loc=>{const ld=locDevs(loc);const log=checkLog[loc.id]||{};const done=!!log.checked;
+      return`<div class="tile" style="margin-bottom:10px;border:2px solid ${done?'var(--primary)':'var(--ol)'}">
+        <!-- Location header -->
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <div class="chk${done?' on':''}" onclick="toggleCL('${loc.id}')" style="flex-shrink:0">${done?'✓':''}</div>
+          <div style="flex:1">
+            <div style="font-weight:700;font-size:14px;${done?'color:var(--primary)':''}">${esc(loc.name)}</div>
+            ${loc.town?`<div class="tile-sub">📍 ${esc(loc.town)}</div>`:''}
+            ${ld.map(a=>`<div class="tile-sub">📷 ${a.qty>1?a.qty+'× ':''}${esc(devLabel(a.dev))}</div>`).join('')}
+            ${ld.length?'<div style="margin-top:3px">'+ld.flatMap(a=>a.dev.batteries.map(b=>'<span class="badge amber">'+(b.qty*a.qty)+'× '+esc(battName(b.typeId))+'</span>')).join('')+'</div>':''}
+          </div>
+        </div>
+        <!-- Batteries changed per device — only for devices WITH batteries -->
+        ${(()=>{const battDevs=ld.filter(a=>a.dev.batteries&&a.dev.batteries.length>0);
+        if(!battDevs.length)return'';
+        return`<div class="fl">Batterien gewechselt</div>
+        <div style="margin-bottom:8px">
+        ${battDevs.map(a=>{
+          const key='batt_'+a.dev.id;
+          const changed=log[key];
+          const dateStr=devBattDate(loc,a.dev.id);const ba=battAge(dateStr);
+          return`<div class="tile" style="cursor:pointer;margin-bottom:4px;background:${changed?'rgba(76,175,80,0.08)':'var(--sf3)'}"
+               onclick="clToggle('${loc.id}','${key}');renderCheck()">
+            <div class="check-row">
+              <div class="chk sm${changed?' on':''}">✓</div>
+              <div style="flex:1">
+                <div style="font-size:13px;font-weight:600">${a.qty>1?a.qty+'× ':''}${esc(devLabel(a.dev))}</div>
+                <div style="font-size:10px;margin-top:1px">
+                  ${a.dev.batteries.map(b=>`<span class="badge amber">${b.qty*a.qty}× ${esc(battName(b.typeId))}</span>`).join('')}
+                </div>
+                ${ba?`<div style="font-size:10px;margin-top:2px">Letzter Wechsel: <span style="color:${ba.color};font-weight:700">${ba.label}</span> <span style="opacity:.6">(${ba.date})</span></div>`:`<div style="font-size:10px;margin-top:2px;opacity:.4">Noch kein Wechsel erfasst</div>`}
+              </div>
+            </div>
+          </div>`;}).join('')}
+        </div>`;})()}
+        <!-- Findings -->
+        <div class="fl">Befunde / Beobachtungen</div>
+        <div class="chips" style="margin-bottom:8px">
+          ${DB.findingTypes.map(ft=>{const on=(log.findings||[]).includes(ft.id);return`<div class="chip dng${on?' on':''}" onclick="clFinding('${loc.id}','${ft.id}');renderCheck()">${esc(ft.name)}</div>`}).join('')}
+        </div>
+        <!-- Next time material -->
+        <div class="fl">Nächstes Mal mitnehmen / erledigen</div>
+        <input type="text" placeholder="z.B. Neuen Baumgurt, Linse ersetzen..." style="margin-bottom:8px;font-size:13px"
+          value="${esc(log.nextMat||'')}" onchange="clNextMat('${loc.id}',this.value)" oninput="clNextMat('${loc.id}',this.value)">
+        <!-- Notes -->
+        <div class="fl">Notizen</div>
+        <textarea placeholder="Allgemeine Beobachtungen, Tieraktivität, Besonderheiten..."
+          style="width:100%;padding:.6rem;border:1px solid var(--ol);border-radius:6px;font-size:13px;font-family:inherit;resize:vertical;min-height:52px;background:var(--sf3);outline:none;box-sizing:border-box"
+          onchange="clNote('${loc.id}',this.value)" oninput="clNote('${loc.id}',this.value)">${esc(log.notes||'')}</textarea>
+        ${!done?`<div style="margin-top:8px"><button class="btn btn-p" style="font-size:11px;padding:.6rem" onclick="toggleCL('${loc.id}')">✓ Standort als geprüft markieren</button></div>`:''}
+      </div>`}).join('')}</div></section>`}).join('');
+  // Actions
+  const aE=document.getElementById('checkActs');
+  if(allLocs.length){
+    aE.style.display='block';
+    const remaining=allLocs.length-totalChecked;
+    // Format today as default date for the input
+    const todayISO=new Date().toISOString().slice(0,10);
+    if(!window._checkDate)window._checkDate=todayISO;
+    aE.innerHTML=`<div style="padding:0 .75rem">
+      ${!allDone?`<div style="background:rgba(255,152,0,.1);border:1px solid rgba(255,152,0,.3);border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:12px;color:var(--warn)">⚠️ Noch ${remaining} Standort${remaining===1?'':'e'} nicht geprüft</div>`:''}
+      <div style="background:var(--sf2);border-radius:8px;padding:10px 12px;margin-bottom:8px">
+        <div style="font-size:11px;font-weight:700;color:var(--on-sv);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">📅 Check-Datum</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="date" id="checkDateInput" value="${window._checkDate}" style="flex:1;font-size:13px" onchange="confirmDateChange(this)">
+          ${window._checkDate!==todayISO?`<span class="badge" style="background:rgba(255,152,0,.15);color:var(--warn)">Angepasst</span>`:'<span class="badge">Heute</span>'}
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-o" style="flex:1" onclick="if(confirm('Check zurücksetzen?')){checkLog={};window._checkDate=null;renderCheck()}">Reset</button>
+        <button class="btn btn-p" style="flex:2;${!allDone?'opacity:.5':''}" onclick="${allDone?'finishSession()':'showUnfinished()'}">
+          ${allDone?'Session abschliessen ✓':'Session abschliessen ('+totalChecked+'/'+allLocs.length+')'}
+        </button>
+      </div>
+    </div>`;
+  }else{aE.style.display='none'}
+}
+function toggleCA(id){if(checkAreas.includes(id))checkAreas=checkAreas.filter(a=>a!==id);else checkAreas.push(id);renderCheck()}
+function toggleCL(id){if(!checkLog[id])checkLog[id]={};checkLog[id].checked=!checkLog[id].checked;checkLog[id].ts=new Date().toISOString();renderCheck()}
+function clToggle(id,key){if(!checkLog[id])checkLog[id]={};checkLog[id][key]=!checkLog[id][key]}
+function clFinding(id,ftId){if(!checkLog[id])checkLog[id]={};const c=checkLog[id].findings||[];checkLog[id].findings=c.includes(ftId)?c.filter(x=>x!==ftId):[...c,ftId]}
+function clNextMat(id,val){if(!checkLog[id])checkLog[id]={};checkLog[id].nextMat=val}
+function clNote(id,val){if(!checkLog[id])checkLog[id]={};checkLog[id].notes=val}
+function confirmDateChange(input){
+  const todayISO=new Date().toISOString().slice(0,10);
+  if(input.value===todayISO){window._checkDate=todayISO;renderCheck();return}
+  const d=new Date(input.value);
+  const label=d.toLocaleDateString('de-CH',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  if(confirm(`Check-Datum auf ${label} setzen?\n\nDies ist sinnvoll wenn du den Check nachträglich zuhause erfasst.`)){
+    window._checkDate=input.value;
+  }else{
+    input.value=window._checkDate||todayISO;
+  }
+  renderCheck();
+}
+function showUnfinished(){
+  const allLocs=checkAreas.flatMap(aId=>areaActiveLocs(aId));
+  const missing=allLocs.filter(l=>!checkLog[l.id]?.checked).map(l=>l.name);
+  if(confirm('Noch nicht geprüft:\n• '+missing.join('\n• ')+'\n\nTrotzdem abschliessen?'))finishSession();
+}
+function finishSession(){
+  // Use custom check date if set, otherwise now
+  const dateInput=window._checkDate;
+  const todayISO=new Date().toISOString().slice(0,10);
+  let now;
+  if(dateInput&&dateInput!==todayISO){
+    // Use selected date with current time
+    const t=new Date();
+    now=new Date(dateInput+'T'+t.toTimeString().slice(0,8)).toISOString();
+  }else{
+    now=new Date().toISOString();
+  }
+  window._checkDate=null;
+  let totalBattChanged=0;
+  Object.values(checkLog).forEach(d=>{if(!d)return;Object.keys(d).forEach(k=>{if(k.startsWith('batt_')&&d[k])totalBattChanged++;})});
+  const findingCount=Object.values(checkLog).reduce((s,l)=>s+(l?.findings?.length||0),0);
+  // Store per-location detail in session for history
+  const locLogs=Object.entries(checkLog).map(([locId,d])=>{
+    if(!d||!d.checked)return null;
+    const loc=DB.locations.find(l=>l.id===locId);
+    const findingNames=(d.findings||[]).map(fid=>DB.findingTypes.find(f=>f.id===fid)?.name).filter(Boolean);
+    const changedDevIds=Object.keys(d).filter(k=>k.startsWith('batt_')&&d[k]).map(k=>k.replace('batt_',''));
+    const changedDevNames=changedDevIds.map(did=>DB.devices.find(x=>x.id===did)).filter(Boolean).map(devLabel);
+    return{locId,locName:loc?.name||locId,findings:findingNames,battChanged:changedDevNames,nextMat:d.nextMat||'',notes:d.notes||''};
+  }).filter(Boolean);
+  const sess={id:uid(),date:now,areas:checkAreas.map(a=>DB.areas.find(x=>x.id===a)?.name).filter(Boolean),checked:Object.values(checkLog).filter(l=>l?.checked).length,battChanged:totalBattChanged,findingCount,locLogs};
+  DB.history.unshift(sess);if(DB.history.length>100)DB.history=DB.history.slice(0,100);
+  Object.entries(checkLog).forEach(([locId,d])=>{
+    if(!d)return;
+    const changedDevIds=Object.keys(d).filter(k=>k.startsWith('batt_')&&d[k]).map(k=>k.replace('batt_',''));
+    if(changedDevIds.length){DB.locations=DB.locations.map(l=>{if(l.id!==locId)return l;const dates={...(l.batteryChangeDates||{})};changedDevIds.forEach(devId=>{dates[devId]=now});return{...l,batteryChangeDates:dates}})}
+    if(d?.checked){DB.locations=DB.locations.map(l=>l.id===locId?{...l,lastChecked:now}:l)}
+    // nextMat → material list
+    if(d?.nextMat?.trim()){const loc=DB.locations.find(l=>l.id===locId);const ar=DB.areas.find(a=>a.id===loc?.areaId);DB.material.unshift({id:uid(),locId,locName:loc?.name,area:ar?.name,issue:d.nextMat.trim(),notes:'',category:'📦 Material',manual:false,date:now,resolved:false})}
+  });
+  checkLog={};checkAreas=[];saveLocal();syncData();showPage('material',document.querySelector('[data-p="material"]'));
+}
+
+// ═══════════════ MATERIAL ═══════════════
+function saveMatManual(){
+  const desc=document.getElementById('m_matdesc').value.trim();if(!desc){alert('Beschreibung eingeben');return}
+  const cat=document.querySelector('#m_matcat .chip.on')?.dataset.v||'📝 Aufgabe';
+  const locVal=document.getElementById('m_matloc').value;
+  const [locId,areaName]=locVal?locVal.split('|'):['',''];
+  const loc=locId?DB.locations.find(l=>l.id===locId):null;
+  const notes=document.getElementById('m_matnotes').value.trim();
+  DB.material.unshift({id:uid(),locId:locId||'',locName:loc?.name||'',area:areaName||'',issue:desc,notes,category:cat,manual:true,date:new Date().toISOString(),resolved:false});
+  saveLocal();closeModal();
+}
+function renderMat(){
+  const op=DB.material.filter(m=>!m.resolved),dn=DB.material.filter(m=>m.resolved);
+  document.getElementById('matOpen').innerHTML=op.length?op.map(m=>{
+    const isManual=m.manual;
+    return`<div class="tile mat-card${isManual?' mat-manual':''}"><div class="flex-b" style="align-items:flex-start"><div style="flex:1">
+    ${m.category?`<div style="font-size:9px;font-weight:800;color:#9C27B0;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">${esc(m.category)}</div>`:''}
+    <div class="tile-t" style="color:${isManual?'#9C27B0':'var(--warn)'}">${m.locName||'Allgemein'}</div>
+    ${m.area?`<div class="tile-sub">${esc(m.area)}</div>`:''}
+    <div style="margin-top:4px;font-size:13px">${esc(m.issue)}</div>
+    ${m.notes?`<div class="tile-sub">📝 ${esc(m.notes)}</div>`:''}
+    <div class="tile-sub">${new Date(m.date).toLocaleDateString('de-CH')}</div></div>
+    <button class="btn btn-sm btn-o" style="color:var(--primary);flex-shrink:0" onclick="resolveMat('${m.id}')">✓</button></div></div>`}).join(''):'<div class="empty"><div class="empty-i">✅</div><div class="empty-t">Alles erledigt!</div></div>';
+  const ds=document.getElementById('matDoneSec');if(dn.length){ds.style.display='block';document.getElementById('matDone').innerHTML=dn.map(m=>`<div class="tile mat-card resolved"><div class="tile-sub">${m.locName||'Allgemein'} — ${esc(m.issue)}</div></div>`).join('')}else{ds.style.display='none'}
+}
+function resolveMat(id){DB.material=DB.material.map(m=>m.id===id?{...m,resolved:true}:m);saveLocal();renderMat()}
+function clearMat(){DB.material=DB.material.filter(m=>!m.resolved);saveLocal();renderMat()}
+
+// ═══════════════ HISTORY ═══════════════
+function renderHist(){
+  const el=document.getElementById('histList');
+  if(!DB.history.length){el.innerHTML='<div class="empty"><div class="empty-i">📊</div><div class="empty-t">Noch keine Checks</div></div>';return}
+  el.innerHTML=DB.history.map(h=>`<div class="tile">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span class="tile-t" style="color:var(--primary)">${new Date(h.date).toLocaleDateString('de-CH')}</span>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span class="tile-sub">${new Date(h.date).toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit'})}</span>
+        <button class="btn btn-sm btn-d" style="padding:2px 7px;font-size:10px" onclick="delHistEntry('${h.id}')">✕</button>
+      </div>
+    </div>
+    <div class="tile-sub">${h.areas?.join(', ')}</div>
+    <div style="display:flex;gap:10px;margin-top:6px;font-size:11px;flex-wrap:wrap">
+      <span style="color:var(--primary);font-weight:700">✓ ${h.checked} gecheckt</span>
+      ${h.battChanged?`<span style="color:var(--warn);font-weight:700">🔋 ${h.battChanged} Bat. gewechselt</span>`:''}
+      ${h.findingCount?`<span style="color:var(--danger);font-weight:700">🔍 ${h.findingCount} Befunde</span>`:''}
+    </div>
+    ${h.locLogs?.length?`<div style="margin-top:8px;border-top:1px solid var(--ol);padding-top:8px">
+      ${h.locLogs.map(ll=>`<div style="margin-bottom:8px">
+        <div style="font-weight:600;font-size:12px">${esc(ll.locName)}</div>
+        ${ll.battChanged?.length?`<div class="tile-sub">🔋 ${ll.battChanged.map(esc).join(', ')}</div>`:''}
+        ${ll.findings?.length?`<div class="tile-sub" style="color:var(--danger)">🔍 ${ll.findings.map(esc).join(' · ')}</div>`:''}
+        ${ll.nextMat?`<div class="tile-sub" style="color:#9C27B0">📦 ${esc(ll.nextMat)}</div>`:''}
+        ${ll.notes?`<div class="tile-sub" style="font-style:italic">📝 ${esc(ll.notes)}</div>`:''}
+      </div>`).join('')}
+    </div>`:''}
+  </div>`).join('');
+  el.innerHTML+=`<div class="mt-3"><button class="btn btn-sm btn-d w-full" onclick="if(confirm('Alle Checks löschen?')){DB.history=[];saveLocal();renderHist()}">Alle löschen</button></div>`;
+}
+function delHistEntry(id){if(!confirm('Diesen Check löschen?'))return;DB.history=DB.history.filter(h=>h.id!==id);saveLocal();renderHist()}
+
+// ═══════════════ MODALS ═══════════════
+function openModal(type,data,extra){
+  const title=document.getElementById('moT'),body=document.getElementById('moB');
+
+  if(type==='batt'){
+    title.textContent=data?.id?'Batterietyp bearbeiten':'Neuer Batterietyp';
+    body.innerHTML=`<div class="fl">Bezeichnung</div><input type="text" id="m_name" value="${esc(data?.name||'')}" placeholder="z.B. AA Akku 8er Pack">
+    <div class="fl mt-3">Notizen (optional)</div><input type="text" id="m_notes" value="${esc(data?.notes||'')}" placeholder="z.B. Eneloop Pro 2500mAh">
+    <button class="btn btn-p mt-4" onclick="saveBatt(${data?`'${data.id}'`:'null'})">Speichern</button>`;
+  }
+
+  if(type==='finding'){
+    title.textContent=data?.id?'Befundtyp bearbeiten':'Neuer Befundtyp';
+    body.innerHTML=`<div class="fl">Bezeichnung</div><input type="text" id="m_name" value="${esc(data?.name||'')}" placeholder="z.B. Blitz defekt, Tierschaden...">
+    <button class="btn btn-p mt-4" onclick="saveFinding(${data?`'${data.id}'`:'null'})">Speichern</button>`;
+  }
+
+  if(type==='dtype'){
+    title.textContent=data?.id?'Gerätetyp bearbeiten':'Neuer Gerätetyp';
+    body.innerHTML=`<div class="fl">Bezeichnung</div><input type="text" id="m_name" value="${esc(data?.name||'')}" placeholder="z.B. DSLR Cameratrap, Blitzgerät, Sensor...">
+    <button class="btn btn-p mt-4" onclick="saveDtype(${data?`'${data.id}'`:'null'})">Speichern</button>`;
+  }
+
+  if(type==='device'){
+    window._mBatts=[...(data?.batteries||[])];window._mAccs=[...(data?.accessories||[])];
+    window._mDev=data||{};window._mDevNew=true;
+    title.textContent=data?.id?'Gerät bearbeiten':'Neues Gerät';renderDevModal();
+  }
+
+  if(type==='area'){
+    title.textContent=data?.id?'Gebiet bearbeiten':'Neues Gebiet';
+    body.innerHTML=`<div class="fl">Name</div><input type="text" id="m_name" value="${esc(data?.name||'')}" placeholder="z.B. Gälflue">
+    <button class="btn btn-p mt-4" onclick="saveArea(${data?`'${data.id}'`:'null'})">Speichern</button>`;
+  }
+
+  if(type==='matAdd'){
+    title.textContent='Material / Aufgabe erfassen';
+    body.innerHTML=`
+    <div class="fl">Kategorie</div>
+    <div class="chips" id="m_matcat">
+      ${['🔧 Reparatur','🔋 Batterie','📦 Material','🔩 Montage','📷 Gerät','📝 Aufgabe','Anderes'].map((c,i)=>`<div class="chip${i===2?' on':''}" onclick="this.parentNode.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));this.classList.add('on')" data-v="${c}">${c}</div>`).join('')}
+    </div>
+    <div class="fl mt-3">Standort (optional)</div>
+    <select id="m_matloc" style="margin-bottom:4px">
+      <option value="">— Kein spezifischer Standort —</option>
+      ${DB.areas.map(a=>`<optgroup label="${esc(a.name)}">${areaLocs(a.id).map(l=>`<option value="${l.id}|${esc(a.name)}">${esc(l.name)}</option>`).join('')}</optgroup>`).join('')}
+    </select>
+    <div class="fl mt-3">Beschreibung *</div>
+    <input type="text" id="m_matdesc" placeholder="z.B. Neuen Baumgurt mitbringen, Blitz ersetzen...">
+    <div class="fl mt-3">Notizen</div>
+    <textarea id="m_matnotes" placeholder="Details, Bestellnummer, Priorität..."></textarea>
+    <button class="btn btn-p mt-4" onclick="saveMatManual()">Speichern</button>`;
+  }
+
+  if(type==='loc'){
+    title.textContent=data?.id?'Standort bearbeiten':'Neuer Standort';
+    const areaId=data?.areaId||extra;
+    window._mPhotos=data?.photos?[...data.photos]:(data?.photo?[data.photo]:[]);
+    window._mDA=locDevs(data||{}).map(a=>({deviceId:a.deviceId,qty:a.qty}));
+    window._mCurrentLocId=data?.id||null;
+    body.innerHTML=`
+    <div class="fl">Standort-Fotos <span class="coord-label">(mehrere möglich)</span></div>
+    <div class="photo-area">
+      <div id="m_pp"></div>
+      <div class="photo-btns">
+        <button class="btn btn-sm btn-o" style="flex:1" onclick="document.getElementById('m_pi').click()">📷 Foto aufnehmen</button>
+        <button class="btn btn-sm btn-o" style="flex:1" onclick="document.getElementById('m_pf').click()">🖼️ Aus Galerie</button>
+      </div>
+      <input type="file" id="m_pi" accept="image/*" capture="environment" style="display:none" onchange="handlePhoto(this)">
+      <input type="file" id="m_pf" accept="image/*" style="display:none" onchange="handlePhoto(this)">
+    </div>
+    <div class="fl">Ortschaft</div><input type="text" id="m_town" value="${esc(data?.town||'')}" placeholder="z.B. Küttigen">
+    <div class="fl mt-3">Standort-Name</div><input type="text" id="m_name" value="${esc(data?.name||'')}" placeholder="z.B. Oben Felsband">
+    <div class="fl mt-3">Koordinaten <span class="coord-label">(WGS84 / EPSG:4326)</span></div>
+    <div style="display:flex;gap:8px"><div style="flex:1"><input type="text" id="m_lat" value="${esc(data?.lat||'')}" placeholder="Breitengrad" inputmode="decimal"></div><div style="flex:1"><input type="text" id="m_lng" value="${esc(data?.lng||'')}" placeholder="Längengrad" inputmode="decimal"></div></div>
+    <button class="btn btn-sm btn-o w-full mt-3" onclick="getGPS()" id="gpsBtn">📍 GPS-Koordinaten erfassen (WGS84)</button>
+    <button class="btn btn-sm btn-o w-full mt-3" onclick="openMapsForCoords()" style="color:var(--info)">🗺 Google Maps öffnen (Koordinaten ablesen)</button>
+    <div id="gpsInfo"></div>
+    ${!data?.areaId&&!extra?`<div class="fl mt-3">Gebiet</div><div class="chips">${DB.areas.map(a=>`<div class="chip${data?.areaId===a.id?' on':''}" onclick="this.parentNode.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));this.classList.add('on');this.dataset.v='${a.id}'" data-v="${a.id}">${esc(a.name)}</div>`).join('')}</div>`:`<input type="hidden" id="m_areaId" value="${areaId}">`}
+    <div class="fl mt-3">Status</div>
+    <div class="chips">
+      ${['planned','active','inactive'].map(s=>{const curSt=data?.status||'active';return`<div class="chip${curSt===s?' on':''}" onclick="this.parentNode.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));this.classList.add('on');this.dataset.v='${s}'" data-v="${s}">${locStatusLabel(s)}</div>`}).join('')}
+    </div>
+    <div class="fl mt-3">Geräte zuweisen</div>
+    <div id="m_dc"></div>
+    <div class="fl mt-3">Bemerkungen</div>
+    <textarea id="m_locnotes" placeholder="z.B. Schwer zugänglich, Schlüssel nötig, Saisonbetrieb Mai-Oktober..." style="min-height:60px">${esc(data?.notes||'')}</textarea>
+    <button class="btn btn-p mt-4" onclick="saveLoc(${data?.id?`'${data.id}'`:'null'},'${areaId||''}')">Speichern</button>`;
+  }
+
+  document.getElementById('moOv').classList.add('open');
+  if(type==='loc'){renderLocDevs();renderPhotoGrid();}
+}
+
+// Render device assignment UI with qty for non-serial devices
+function renderLocDevs(){
+  const el=document.getElementById('m_dc');if(!el)return;
+  const assigned=window._mDA||[];
+  const currentLocId=window._mCurrentLocId||null;
+
+  // Build a set of device IDs with SN already used at OTHER locations
+  const snUsedElsewhere=new Set();
+  DB.devices.filter(d=>d.serial).forEach(d=>{
+    const usedAt=DB.locations.filter(l=>{
+      if(l.id===currentLocId)return false; // skip current location
+      const assigns=l.deviceAssignments||(l.deviceIds?(l.deviceIds.map(id=>({deviceId:id,qty:1}))):(l.deviceId?[{deviceId:l.deviceId,qty:1}]:[]));
+      return assigns.some(a=>a.deviceId===d.id);
+    });
+    if(usedAt.length>0)snUsedElsewhere.add(d.id);
+  });
+
+  let html='';
+  // Show assigned devices
+  assigned.forEach((a,i)=>{
+    const d=DB.devices.find(x=>x.id===a.deviceId);if(!d)return;
+    const hasSN=!!d.serial;
+    html+=`<div class="tile" style="display:flex;align-items:center;gap:8px;margin-bottom:6px">`;
+    if(!hasSN){html+=`<div class="qty-ctrl"><button class="qty-btn" onclick="window._mDA[${i}].qty=Math.max(1,window._mDA[${i}].qty-1);renderLocDevs()">−</button><span class="qty-val">${a.qty}</span><button class="qty-btn" onclick="window._mDA[${i}].qty++;renderLocDevs()">+</button></div>`}
+    else{html+=`<span style="font-size:12px;color:var(--on-sv);min-width:46px;text-align:center">1×</span>`}
+    html+=`<div style="flex:1;font-size:13px"><div>${esc(devLabel(d))}</div>${d.serial?`<div style="font-family:monospace;font-size:9px;color:var(--on-sv)">SN: ${esc(d.serial)}</div>`:'<div style="font-size:9px;color:var(--info)">Menge einstellbar</div>'}</div>`;
+    html+=`<button class="qty-btn" style="color:var(--danger);border-color:rgba(244,67,54,.2)" onclick="window._mDA.splice(${i},1);renderLocDevs()">✕</button></div>`;
+  });
+
+  // Available devices — group by type
+  const availDevs=DB.devices.filter(d=>!assigned.some(a=>a.deviceId===d.id));
+  if(availDevs.length){
+    // Group by device type
+    const groups={};
+    availDevs.forEach(d=>{
+      const typeName=DB.deviceTypes.find(t=>t.id===d.deviceType)?.name||'Ohne Typ';
+      if(!groups[typeName])groups[typeName]=[];
+      groups[typeName].push(d);
+    });
+    html+='<div style="margin-top:8px">';
+    Object.entries(groups).forEach(([typeName,devs])=>{
+      html+=`<div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--on-sv);letter-spacing:.04em;margin:8px 0 4px">${esc(typeName)}</div>`;
+      html+='<div class="chips">';
+      devs.forEach(d=>{
+        const blocked=d.serial&&snUsedElsewhere.has(d.id);
+        const usedAt=blocked?DB.locations.find(l=>{
+          if(l.id===currentLocId)return false;
+          const assigns=l.deviceAssignments||(l.deviceId?[{deviceId:l.deviceId}]:[]);
+          return assigns.some(a=>a.deviceId===d.id);
+        }):null;
+        if(blocked){
+          html+=`<div class="chip" style="opacity:.4;cursor:not-allowed;border-style:dashed" title="Bereits zugewiesen an: ${esc(usedAt?.name||'?')}">🔒 ${esc(devLabel(d))} <span style="font-size:9px">(${esc(usedAt?.name||'anderer Standort')})</span></div>`;
+        }else{
+          html+=`<div class="chip" onclick="window._mDA.push({deviceId:'${d.id}',qty:1});renderLocDevs()">+ ${esc(devLabel(d))}${d.serial?` <span style="font-size:9px;opacity:.6">(${esc(d.serial)})</span>`:''}</div>`;
+        }
+      });
+      html+='</div>';
+    });
+    html+='</div>';
+  }
+  if(!assigned.length&&!availDevs.length)html='<div class="tile-sub">Keine Geräte erfasst</div>';
+  el.innerHTML=html;
+}
+
+function renderDevModal(){
+  const body=document.getElementById('moB');
+  // On re-render (battery/acc change), save current form values first
+  if(!window._mDevNew){
+    const el=document.getElementById('m_name');
+    if(el){window._mDev={...window._mDev,name:el.value,manufacturer:document.getElementById('m_mfr').value,model:document.getElementById('m_mdl').value,serial:document.getElementById('m_sn').value,notes:document.getElementById('m_devnotes').value,deviceType:document.querySelector('#m_dt .chip.on')?.dataset.v||''}}
+  }
+  window._mDevNew=false;
+  const d=window._mDev;const avail=DB.batteryTypes.filter(bt=>!window._mBatts.some(b=>b.typeId===bt.id));
+  body.innerHTML=`
+    <div class="fl">Gerätetyp</div><div class="chips" id="m_dt">${DB.deviceTypes.map(t=>`<div class="chip${d.deviceType===t.id||d.deviceType===t.name?' on':''}" onclick="this.parentNode.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));this.classList.add('on');this.dataset.v='${t.id}'" data-v="${t.id}">${esc(t.name)}</div>`).join('')}</div>
+    <div style="display:flex;gap:8px;margin-top:.75rem"><div style="flex:1"><div class="fl">Hersteller</div><input type="text" id="m_mfr" value="${esc(d.manufacturer||'')}" placeholder="z.B. Gardepro"></div><div style="flex:1"><div class="fl">Modell</div><input type="text" id="m_mdl" value="${esc(d.model||'')}" placeholder="z.B. A3S"></div></div>
+    <div style="display:flex;gap:8px;margin-top:.75rem"><div style="flex:1"><div class="fl">Gerätename (opt.)</div><input type="text" id="m_name" value="${esc(d.name||'')}" placeholder="z.B. Cam #1"></div><div style="flex:1"><div class="fl">Seriennummer</div><input type="text" id="m_sn" value="${esc(d.serial||'')}" placeholder="SN"></div></div>
+    <div class="fl mt-3">Batterien</div>
+    ${window._mBatts.map((b,i)=>`<div class="tile" style="display:flex;align-items:center;gap:8px"><div class="qty-ctrl"><button class="qty-btn" onclick="window._mBatts[${i}].qty=Math.max(1,window._mBatts[${i}].qty-1);renderDevModal()">−</button><span class="qty-val">${b.qty}</span><button class="qty-btn" onclick="window._mBatts[${i}].qty++;renderDevModal()">+</button></div><span style="flex:1;font-size:13px">${esc(battName(b.typeId))}</span><button class="qty-btn" style="color:var(--danger);border-color:rgba(244,67,54,.2)" onclick="window._mBatts.splice(${i},1);renderDevModal()">✕</button></div>`).join('')}
+    ${!DB.batteryTypes.length?'<div class="tile-sub" style="color:var(--warn)">⚠️ Zuerst Batterietypen erfassen</div>':avail.length?'<div class="chips mt-3">'+avail.map(bt=>`<div class="chip" onclick="window._mBatts.push({typeId:'${bt.id}',qty:1});renderDevModal()">+ ${esc(bt.name)}</div>`).join('')+'</div>':''}
+    <div class="fl mt-4">Zubehör</div>
+    ${window._mAccs.map((a,i)=>`<div class="flex-b mb-3"><span style="font-size:13px">${esc(a)}</span><button class="qty-btn" style="color:var(--danger);border-color:rgba(244,67,54,.2)" onclick="window._mAccs.splice(${i},1);renderDevModal()">✕</button></div>`).join('')}
+    <div style="display:flex;gap:6px"><input type="text" id="m_acc" placeholder="z.B. SD-Karte 64GB" style="flex:1"><button class="btn btn-sm btn-o" onclick="const v=document.getElementById('m_acc').value.trim();if(v){window._mAccs.push(v);renderDevModal()}">+</button></div>
+    <div class="fl mt-4">Kommentar / Notizen</div>
+    <textarea id="m_devnotes" placeholder="z.B. Gehäuse hat Kratzer, Firmware v2.1 installiert...">${esc(d.notes||'')}</textarea>
+    <button class="btn btn-p mt-4" onclick="saveDev(${d.id?`'${d.id}'`:'null'})">Speichern</button>`;
+}
+
+function closeModal(){document.getElementById('moOv').classList.remove('open');const a=document.querySelector('.page.active');if(a)renderPage(a.id.replace('page-',''))}
+
+// ═══════════════ SAVE ═══════════════
+function saveBatt(id){const n=document.getElementById('m_name').value.trim(),nt=document.getElementById('m_notes').value.trim();if(!n)return;if(id){DB.batteryTypes=DB.batteryTypes.map(b=>b.id===id?{...b,name:n,notes:nt}:b)}else{DB.batteryTypes.push({id:uid(),name:n,notes:nt})}saveLocal();closeModal()}
+function saveFinding(id){const n=document.getElementById('m_name').value.trim();if(!n)return;if(id){DB.findingTypes=DB.findingTypes.map(f=>f.id===id?{...f,name:n}:f)}else{DB.findingTypes.push({id:uid(),name:n})}saveLocal();closeModal()}
+function saveDtype(id){
+  const n=document.getElementById('m_name').value.trim();if(!n)return;
+  if(id){
+    const oldType=DB.deviceTypes.find(t=>t.id===id);
+    // Migrate any devices that stored the type by name (old format) to use the ID
+    if(oldType){DB.devices=DB.devices.map(d=>d.deviceType===oldType.name||d.deviceType===id?{...d,deviceType:id}:d)}
+    DB.deviceTypes=DB.deviceTypes.map(t=>t.id===id?{...t,name:n}:t);
+  }else{DB.deviceTypes.push({id:uid(),name:n})}
+  saveLocal();closeModal();
+}
+function saveDev(id){
+  const name=document.getElementById('m_name').value.trim(),mfr=document.getElementById('m_mfr').value.trim(),mdl=document.getElementById('m_mdl').value.trim(),sn=document.getElementById('m_sn').value.trim(),notes=document.getElementById('m_devnotes').value.trim();
+  const dtC=document.querySelector('#m_dt .chip.on');const dt=dtC?.dataset.v||'';
+  if(!mfr&&!mdl&&!name){alert('Hersteller oder Modell angeben');return}
+  const obj={name,manufacturer:mfr,model:mdl,serial:sn,deviceType:dt,notes,batteries:window._mBatts,accessories:window._mAccs};
+  if(id){DB.devices=DB.devices.map(d=>d.id===id?{...d,...obj}:d)}else{DB.devices.push({id:uid(),...obj})}saveLocal();closeModal()
+}
+function saveArea(id){const n=document.getElementById('m_name').value.trim();if(!n)return;if(id){DB.areas=DB.areas.map(a=>a.id===id?{...a,name:n}:a)}else{DB.areas.push({id:uid(),name:n})}saveLocal();closeModal()}
+function saveLoc(id,defaultAreaId){
+  const name=document.getElementById('m_name').value.trim(),town=document.getElementById('m_town').value.trim(),lat=document.getElementById('m_lat').value.trim(),lng=document.getElementById('m_lng').value.trim(),photo=window._mPhoto||null;
+  if(!name)return;const hA=document.getElementById('m_areaId');let areaId=hA?hA.value:defaultAreaId;
+  if(!areaId){const s=document.querySelector('.chips .chip.on[data-v]');areaId=s?.dataset.v}if(!areaId){alert('Bitte Gebiet auswählen');return}
+  const statusChip=document.querySelector('.chips .chip.on[data-v="planned"],.chips .chip.on[data-v="active"],.chips .chip.on[data-v="inactive"]');
+  const status=statusChip?.dataset.v||data?.status||'active';
+  const photos=window._mPhotos||[];
+  const notes=document.getElementById('m_locnotes')?.value.trim()||'';
+  const deviceAssignments=(window._mDA||[]).filter(a=>a.deviceId);
+  const obj={name,town,lat,lng,photos,notes,areaId,deviceAssignments,status};
+  if(id){DB.locations=DB.locations.map(l=>l.id===id?{...l,...obj}:l)}else{DB.locations.push({id:uid(),...obj})}
+  window._mPhotos=[];saveLocal();closeModal()
+}
+
+// ═══════════════ GPS & PHOTO ═══════════════
+function getGPS(){
+  if(!navigator.geolocation){
+    document.getElementById('gpsInfo').innerHTML=`<div class="gps-info" style="color:var(--danger)">❌ GPS nicht verfügbar.<br><small>Öffne die Datei über einen lokalen HTTP-Server statt als file://</small></div>`;
+    return;
+  }
+  const btn=document.getElementById('gpsBtn'),info=document.getElementById('gpsInfo');
+  btn.textContent='⏳ GPS wird gesucht...';btn.disabled=true;
+  navigator.geolocation.getCurrentPosition(pos=>{
+    document.getElementById('m_lat').value=pos.coords.latitude.toFixed(6);
+    document.getElementById('m_lng').value=pos.coords.longitude.toFixed(6);
+    const acc=pos.coords.accuracy,alt=pos.coords.altitude;
+    btn.textContent='📍 GPS-Koordinaten erfassen (WGS84)';btn.disabled=false;
+    info.innerHTML=`<div class="gps-info">✅ WGS84 · Genauigkeit: ±${acc.toFixed(0)}m${alt!==null?' · Höhe: '+alt.toFixed(0)+'m ü.M.':''}</div>`;
+  },err=>{
+    btn.textContent='📍 GPS-Koordinaten erfassen (WGS84)';btn.disabled=false;
+    let msg='';
+    if(err.code===1){
+      msg=`❌ GPS-Zugriff verweigert bei lokaler Datei (file://).<br>
+      <strong>Lösung A:</strong> Koordinaten über Google Maps ermitteln:<br>
+      <a href="https://maps.google.com" target="_blank" style="color:var(--primary)">🗺 Google Maps öffnen</a> → Standort halten → Koordinaten kopieren → hier einfügen.<br><br>
+      <strong>Lösung B:</strong> App "Simple HTTP Server" (Play Store) installieren → Datei in Downloads → Server starten → Chrome: <code>http://localhost:PORT/LNX_Trailcam_Check.html</code>`;
+    }else if(err.code===2){msg='❌ Standort nicht verfügbar. GPS/WLAN aktiviert?'}
+    else{msg='❌ Timeout — GPS zu langsam. Im Freien versuchen.'}
+    info.innerHTML=`<div class="gps-info" style="color:var(--danger);line-height:1.6">${msg}</div>`;
+  },{enableHighAccuracy:true,timeout:20000,maximumAge:0});
+}
+function openMapsForCoords(){
+  // Try to get current position first to center the map there
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(pos=>{
+      window.open(`https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}&ll=${pos.coords.latitude},${pos.coords.longitude}&z=18`,'_blank');
+    },()=>{window.open('https://maps.google.com','_blank')},{timeout:5000});
+  }else{window.open('https://maps.google.com','_blank')}
+}
+
+// ── Multi-photo handling ──
+function handlePhoto(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){const img=new Image();img.onload=function(){
+    const MW=800,MH=600;let w=img.width,h=img.height;
+    if(w>MW){h=h*MW/w;w=MW}if(h>MH){w=w*MH/h;h=MH}
+    const c=document.createElement('canvas');c.width=w;c.height=h;
+    c.getContext('2d').drawImage(img,0,0,w,h);
+    const du=c.toDataURL('image/jpeg',0.6);
+    window._mPhotos.push(du);
+    renderPhotoGrid();
+  };img.src=e.target.result};
+  reader.readAsDataURL(file);input.value='';
+}
+
+function renderPhotoGrid(){
+  const el=document.getElementById('m_pp');if(!el)return;
+  const photos=window._mPhotos||[];
+  if(!photos.length){
+    el.innerHTML='<div style="background:var(--sf2);border-radius:.5rem;padding:1.5rem;text-align:center;border:1px dashed var(--ol)"><div style="font-size:1.5rem;margin-bottom:4px">📸</div><div style="font-size:11px;color:var(--on-sv)">Noch keine Fotos</div></div>';
+    return;
+  }
+  el.innerHTML='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px">'+photos.map((p,i)=>
+    `<div style="position:relative">
+      <img src="${p}" style="width:80px;height:80px;object-fit:cover;border-radius:6px;border:1px solid var(--ol);cursor:pointer" onclick="showPhotoFull('${i}')">
+      <button onclick="removePhoto(${i})" style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;border:none;background:var(--danger);color:white;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">✕</button>
+    </div>`).join('')+'</div>';
+}
+
+function removePhoto(i){
+  window._mPhotos.splice(i,1);
+  renderPhotoGrid();
+}
+
+function showPhotoFull(i){
+  const p=window._mPhotos[i];if(!p)return;
+  const ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:300;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1rem;cursor:pointer';
+  ov.innerHTML=`<img src="${p}" style="max-width:100%;max-height:85vh;border-radius:8px"><div style="color:rgba(255,255,255,.4);font-size:11px;margin-top:12px">Tippe zum Schliessen</div>`;
+  ov.onclick=()=>ov.remove();document.body.appendChild(ov);
+}
+
+function showPhoto(locId,idx){
+  const loc=DB.locations.find(l=>l.id===locId);if(!loc)return;
+  const photos=loc.photos||(loc.photo?[loc.photo]:[]);
+  if(!photos.length)return;
+  const p=photos[idx||0];
+  const ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:300;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1rem;cursor:pointer';
+  const nav=photos.length>1?`<div style="color:rgba(255,255,255,.5);font-size:11px;margin-bottom:8px">Foto ${(idx||0)+1} von ${photos.length}</div>`:'';
+  ov.innerHTML=`<div style="color:#fff;font-weight:700;margin-bottom:6px;font-size:14px">${esc(loc.name)}</div>
+    ${loc.town?`<div style="color:rgba(255,255,255,.6);font-size:12px;margin-bottom:4px">📍 ${esc(loc.town)}</div>`:''}
+    ${loc.lat&&loc.lng?`<div style="color:rgba(255,255,255,.5);font-size:10px;font-family:monospace;margin-bottom:8px">WGS84: ${esc(loc.lat)}, ${esc(loc.lng)}</div>`:''}
+    ${nav}
+    <img src="${p}" style="max-width:100%;max-height:70vh;border-radius:8px">
+    ${photos.length>1?`<div style="display:flex;gap:8px;margin-top:10px">${photos.map((_,i)=>`<div onclick="event.stopPropagation();ov_replace('${locId}',${i})" style="width:${i===idx?'10':'7'}px;height:${i===idx?'10':'7'}px;border-radius:50%;background:${i===idx?'white':'rgba(255,255,255,.4)'}"></div>`).join('')}</div>`:''}
+    <div style="color:rgba(255,255,255,.4);font-size:11px;margin-top:10px">Tippe zum Schliessen</div>`;
+  ov.onclick=()=>ov.remove();ov.id='_photoOv';document.body.appendChild(ov);
+}
+function ov_replace(locId,idx){document.getElementById('_photoOv')?.remove();showPhoto(locId,idx);}
+</script>
+</body>
+</html>
