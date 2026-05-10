@@ -260,54 +260,54 @@ function resetScriptUrl(){
   document.getElementById('setupOverlay').style.display='flex';
 }
 
-// ═══════════════ SYNC (CORS-free) ═══════════════
-// POST via hidden form+iframe (avoids CORS completely)
-// GET via JSONP script injection (avoids CORS completely)
+// ═══════════════ SYNC — JSONP only (works from GitHub Pages + file://) ═══════════════
+// Both load and save use JSONP (script tag injection) — no CORS issues, no redirect problems
 
-function ensureIframe(){
-  let f=document.getElementById('_lnx_f');
-  if(!f){f=document.createElement('iframe');f.id='_lnx_f';f.name='_lnx_f';f.style.display='none';document.body.appendChild(f)}
-  return f;
-}
-
-function gasPost(action, data){
-  return new Promise((resolve, reject)=>{
-    // Strip photos to keep payload small
-    const clean={...data};
-    clean.locations=(clean.locations||[]).map(l=>{const c={...l};delete c.photo;return c});
-    const body=JSON.stringify(clean);
-    // Try fetch with no-cors first (works from file://, response not readable but request IS sent)
-    fetch(scriptUrl+'?action='+action, {
-      method:'POST',
-      mode:'no-cors',
-      headers:{'Content-Type':'text/plain'},
-      body:body
-    }).then(()=>resolve(true)).catch(()=>{
-      // Fallback: form+iframe, keep form in DOM until done
-      ensureIframe();
-      const form=document.createElement('form');
-      form.method='POST';form.action=scriptUrl+'?action='+action;form.target='_lnx_f';
-      const inp=document.createElement('input');inp.type='hidden';inp.name='data';inp.value=body;
-      form.appendChild(inp);document.body.appendChild(form);
-      form.submit();
-      // Remove form only after delay — immediate removal cancels submission on mobile
-      setTimeout(()=>{try{form.remove()}catch{}resolve(true)},3000);
-    });
+function gasJsonp(params, timeoutMs=20000){
+  return new Promise((resolve,reject)=>{
+    const cb='_lnx_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+    const timer=setTimeout(()=>{
+      delete window[cb];
+      try{document.getElementById(cb)?.remove()}catch{}
+      reject(new Error('Timeout'));
+    },timeoutMs);
+    window[cb]=function(result){
+      clearTimeout(timer);
+      delete window[cb];
+      try{document.getElementById(cb)?.remove()}catch{}
+      resolve(result);
+    };
+    const url=scriptUrl+'?callback='+cb+'&'+params;
+    const s=document.createElement('script');
+    s.id=cb;s.src=url;
+    s.onerror=()=>{clearTimeout(timer);delete window[cb];s.remove();reject(new Error('Network error'))};
+    document.head.appendChild(s);
   });
 }
 
 function gasGet(action){
-  return new Promise((resolve,reject)=>{
-    const cb='_lnx_'+Date.now();
-    const timeout=setTimeout(()=>{delete window[cb];reject(new Error('Timeout'))},12000);
-    window[cb]=function(result){clearTimeout(timeout);delete window[cb];resolve(result)};
-    const s=document.createElement('script');
-    s.src=scriptUrl+'?action='+action+'&callback='+cb;
-    s.onerror=()=>{clearTimeout(timeout);delete window[cb];reject(new Error('Network error'))};
-    document.head.appendChild(s);
-    // Cleanup script tag after load
-    s.onload=()=>{setTimeout(()=>s.remove(),100)};
-  });
+  return gasJsonp('action='+action);
+}
+
+// Save: encode data as compressed URL param chunks
+// Split into separate calls per table to stay under URL limits
+async function gasPost(action, data){
+  if(action!=='saveAll')return gasJsonp('action='+action);
+  // Strip photos
+  const clean={...data};
+  clean.locations=(clean.locations||[]).map(l=>{const c={...l};delete c.photo;delete c.photos;return c});
+  // Send all data in one JSONP GET call with encoded payload
+  const payload=encodeURIComponent(JSON.stringify(clean));
+  // If too large (>60KB encoded), split into per-table saves
+  if(payload.length>60000){
+    const tables=['batteryTypes','findingTypes','deviceTypes','devices','areas','locations','history','material'];
+    for(const t of tables){
+      const chunk={[t]:clean[t]||[]};
+      await gasJsonp('action=saveTable&table='+t+'&data='+encodeURIComponent(JSON.stringify(chunk[t])));
+    }
+    return true;
+  }
+  return gasJsonp('action=saveAll&data='+payload);
 }
 
 async function syncData(){
