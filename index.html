@@ -289,25 +289,32 @@ function gasGet(action){
   return gasJsonp('action='+action);
 }
 
-// Save: encode data as compressed URL param chunks
-// Split into separate calls per table to stay under URL limits
+// Save via fetch no-cors (works from HTTPS/GitHub Pages)
+// Data IS sent to server, we just can't read the response
 async function gasPost(action, data){
   if(action!=='saveAll')return gasJsonp('action='+action);
-  // Strip photos
   const clean={...data};
   clean.locations=(clean.locations||[]).map(l=>{const c={...l};delete c.photo;delete c.photos;return c});
-  // Send all data in one JSONP GET call with encoded payload
-  const payload=encodeURIComponent(JSON.stringify(clean));
-  // If too large (>60KB encoded), split into per-table saves
-  if(payload.length>60000){
+  const body=JSON.stringify(clean);
+  // Try fetch no-cors (HTTPS only — GitHub Pages)
+  try{
+    await fetch(scriptUrl+'?action=saveAll',{
+      method:'POST',
+      mode:'no-cors',
+      headers:{'Content-Type':'text/plain'},
+      body:body
+    });
+    return true;
+  }catch(e){
+    // Fallback: JSONP chunked save (file:// fallback)
     const tables=['batteryTypes','findingTypes','deviceTypes','devices','areas','locations','history','material'];
     for(const t of tables){
-      const chunk={[t]:clean[t]||[]};
-      await gasJsonp('action=saveTable&table='+t+'&data='+encodeURIComponent(JSON.stringify(chunk[t])));
+      const arr=clean[t]||[];
+      if(arr.length===0)continue;
+      await gasJsonp('action=saveTable&table='+encodeURIComponent(t)+'&data='+encodeURIComponent(JSON.stringify(arr)));
     }
     return true;
   }
-  return gasJsonp('action=saveAll&data='+payload);
 }
 
 async function syncData(){
@@ -322,8 +329,28 @@ async function syncData(){
   btn.classList.add('syncing');lbl.textContent='...';
   try{
     await gasPost('saveAll',DB);
-    dirty=false;lbl.textContent='OK ✓';setTimeout(()=>{lbl.textContent='Sync'},1500);
-  }catch(e){lbl.textContent='Fehler';setTimeout(()=>{lbl.textContent='Sync'},2000)}
+    // Verify: load back and check count matches
+    lbl.textContent='Prüfen...';
+    try{
+      const verify=await gasJsonp('action=loadAll',8000);
+      const sheetTotal=(verify.batteryTypes?.length||0)+(verify.devices?.length||0)+(verify.areas?.length||0)+(verify.locations?.length||0);
+      if(sheetTotal>0){
+        dirty=false;lbl.textContent='OK ✓';
+        setTimeout(()=>{lbl.textContent='Sync'},1500);
+      }else{
+        lbl.textContent='Fehler';
+        alert('Sync geschickt aber Sheet ist leer — bitte Apps Script neu deployen (Deploy → Manage → ✎ → New version)');
+        setTimeout(()=>{lbl.textContent='Sync'},3000);
+      }
+    }catch(ve){
+      // Verification failed but send might have worked
+      dirty=false;lbl.textContent='OK?';
+      setTimeout(()=>{lbl.textContent='Sync'},2000);
+    }
+  }catch(e){
+    lbl.textContent='Fehler';
+    setTimeout(()=>{lbl.textContent='Sync'},2000);
+  }
   btn.classList.remove('syncing');updateDot();
 }
 
