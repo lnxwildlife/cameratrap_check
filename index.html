@@ -131,6 +131,20 @@ nav{position:fixed;bottom:0;width:100%;background:rgba(255,255,255,.95);backdrop
   <div id="dtypeList" style="display:none"></div>
   <div id="deviceList"></div>
 </section>
+<section>
+  <div class="sec-head"><div class="sec-title"><span class="sec-icon">⚙️</span> Einstellungen</div></div>
+  <div class="fl">Google Drive Foto-Ordner</div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <input type="text" id="photoFolderInput" placeholder="z.B. LNX Wildlife Services/Cameratrap/Fotos" style="flex:1;font-size:13px">
+    <button class="btn btn-sm btn-o" onclick="savePhotoFolder()">Speichern</button>
+  </div>
+  <div style="font-size:11px;color:var(--on-sv);margin-top:4px">Verschachtelte Pfade mit / trennen. Ordner werden automatisch erstellt.</div>
+  <div class="fl mt-3">Script-URL</div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <div id="scriptUrlDisplay" style="flex:1;font-size:11px;color:var(--on-sv);font-family:monospace;word-break:break-all"></div>
+    <button class="btn btn-sm btn-o" onclick="resetScriptUrl()">Ändern</button>
+  </div>
+</section>
 </div>
 <div class="page" id="page-areas"><section><div class="sec-head"><div class="sec-title"><span class="sec-icon">🗺️</span> Gebiete & Standorte</div><button class="btn btn-sm btn-o" onclick="openModal('area')">+ Gebiet</button></div><div id="areaList"></div></section></div>
 <div class="page" id="page-check"><section><div class="sec-head"><div class="sec-title"><span class="sec-icon">🎒</span> Check vorbereiten</div></div><div id="checkAreaSel"></div></section><div id="checkBatt" style="display:none"></div><div id="checkMat" style="display:none"></div><div id="checkField" style="display:none"></div><div id="checkActs" style="display:none"></div></div>
@@ -373,7 +387,7 @@ async function uploadPendingPhotos(){
         await fetch(scriptUrl+'?action=uploadPhoto',{
           method:'POST',mode:'no-cors',
           headers:{'Content-Type':'text/plain'},
-          body:JSON.stringify({locId:loc.id,locName:loc.name,idx:i,photo:p})
+          body:JSON.stringify({locId:loc.id,locName:loc.name,idx:i,photo:p,folder:DB.settings?.photoFolder||'LNX_Trailcam_Photos'})
         });
         uploaded++;
       }catch(e){}
@@ -448,7 +462,20 @@ function updateDot(){const d=document.getElementById('syncDot');if(!scriptUrl)d.
 // ═══════════════ NAV ═══════════════
 function showPage(n,el){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById('page-'+n).classList.add('active');document.querySelectorAll('.nav-i').forEach(x=>x.classList.remove('active'));if(el)el.classList.add('active');renderPage(n)}
 function renderAll(){showPage('stammdaten',document.querySelector('[data-p="stammdaten"]'))}
-function renderPage(n){({stammdaten:()=>{renderBatt();renderFindings();renderDev()},areas:renderAreas,check:renderCheck,material:renderMat,history:renderHist})[n]?.()}
+function renderPage(n){({stammdaten:()=>{renderBatt();renderFindings();renderDev();renderSettings()},areas:renderAreas,check:renderCheck,material:renderMat,history:renderHist})[n]?.()}
+function renderSettings(){
+  const inp=document.getElementById('photoFolderInput');
+  if(inp)inp.value=DB.settings?.photoFolder||'LNX_Trailcam_Photos';
+  const disp=document.getElementById('scriptUrlDisplay');
+  if(disp)disp.textContent=scriptUrl||'Nicht verbunden';
+}
+function savePhotoFolder(){
+  const val=document.getElementById('photoFolderInput').value.trim()||'LNX_Trailcam_Photos';
+  if(!DB.settings)DB.settings={};
+  DB.settings.photoFolder=val;
+  saveLocal();
+  alert('✅ Foto-Ordner gespeichert: '+val+'\n\nBeim nächsten Sync werden Fotos in diesen Ordner hochgeladen.');
+}
 
 // ═══════════════ BATTERIES ═══════════════
 function renderBatt(){
