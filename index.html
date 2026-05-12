@@ -329,7 +329,6 @@ async function syncData(){
   btn.classList.add('syncing');lbl.textContent='...';
   try{
     await gasPost('saveAll',DB);
-    // Verify: load back and check count matches
     lbl.textContent='Prüfen...';
     try{
       const verify=await gasJsonp('action=loadAll',8000);
@@ -337,21 +336,55 @@ async function syncData(){
       if(sheetTotal>0){
         dirty=false;lbl.textContent='OK ✓';
         setTimeout(()=>{lbl.textContent='Sync'},1500);
+        // Upload any pending local photos in background
+        uploadPendingPhotos();
       }else{
         lbl.textContent='Fehler';
         alert('Sync geschickt aber Sheet ist leer — bitte Apps Script neu deployen (Deploy → Manage → ✎ → New version)');
         setTimeout(()=>{lbl.textContent='Sync'},3000);
       }
     }catch(ve){
-      // Verification failed but send might have worked
       dirty=false;lbl.textContent='OK?';
       setTimeout(()=>{lbl.textContent='Sync'},2000);
+      uploadPendingPhotos();
     }
   }catch(e){
     lbl.textContent='Fehler';
     setTimeout(()=>{lbl.textContent='Sync'},2000);
   }
   btn.classList.remove('syncing');updateDot();
+}
+
+// Upload local base64 photos to Google Drive in background
+async function uploadPendingPhotos(){
+  if(!scriptUrl)return;
+  const pending=DB.locations.filter(l=>{
+    const photos=l.photos||(l.photo?[l.photo]:[]);
+    return photos.some(p=>p&&p.startsWith('data:image'));
+  });
+  if(!pending.length)return;
+  let uploaded=0;
+  for(const loc of pending){
+    const photos=loc.photos||(loc.photo?[loc.photo]:[]);
+    for(let i=0;i<photos.length;i++){
+      const p=photos[i];
+      if(!p||!p.startsWith('data:image'))continue;
+      try{
+        await fetch(scriptUrl+'?action=uploadPhoto',{
+          method:'POST',mode:'no-cors',
+          headers:{'Content-Type':'text/plain'},
+          body:JSON.stringify({locId:loc.id,locName:loc.name,idx:i,photo:p})
+        });
+        uploaded++;
+      }catch(e){}
+      // Small delay between uploads to avoid overloading
+      await new Promise(r=>setTimeout(r,500));
+    }
+  }
+  if(uploaded>0){
+    // Pull after delay to get Drive URLs back
+    setTimeout(()=>pullFromSheet(false),3000);
+  }
 }
 
 async function pullFromSheet(manual){
@@ -371,6 +404,28 @@ async function pullFromSheet(manual){
         }
       }
       DB=data;
+      // Merge: keep local base64 photos, add Drive URLs from sheet
+      DB.locations=DB.locations.map(loc=>{
+        const local=JSON.parse(localStorage.getItem('lnx_db')||'{}');
+        const localLoc=(local.locations||[]).find(l=>l.id===loc.id);
+        if(localLoc){
+          // Merge photos: keep local base64, use Drive URL if available
+          const sheetPhotos=loc.drivePhotoUrls||[];
+          const localPhotos=localLoc.photos||(localLoc.photo?[localLoc.photo]:[]);
+          if(sheetPhotos.length>0){
+            // Replace uploaded photos with Drive URLs, keep any non-uploaded local ones
+            const merged=localPhotos.map((p,i)=>sheetPhotos[i]||p).filter(Boolean);
+            if(merged.length>sheetPhotos.length){
+              // Extra local photos not yet uploaded
+              merged.push(...localPhotos.slice(sheetPhotos.length));
+            }
+            loc.photos=merged;
+          }else if(localPhotos.length){
+            loc.photos=localPhotos;
+          }
+        }
+        return loc;
+      });
       if(!DB.deviceTypes.length){DB.deviceTypes=[{id:uid(),name:'Trailcam'},{id:uid(),name:'DSLR Cameratrap'},{id:uid(),name:'Spypoint'},{id:uid(),name:'PIR Sensor'},{id:uid(),name:'Blitzgerät'},{id:uid(),name:'Sonstiges'}]}
       saveLocal();dirty=false;updateDot();renderAll();
       if(btn){btn.textContent='⬇ OK ✓';setTimeout(()=>{btn.textContent='⬇ Pull'},1500)}
