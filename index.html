@@ -791,19 +791,65 @@ function saveMatManual(){
   saveLocal();closeModal();
 }
 function renderMat(){
-  const op=DB.material.filter(m=>!m.resolved),dn=DB.material.filter(m=>m.resolved);
-  document.getElementById('matOpen').innerHTML=op.length?op.map(m=>{
-    const isManual=m.manual;
-    return`<div class="tile mat-card${isManual?' mat-manual':''}"><div class="flex-b" style="align-items:flex-start"><div style="flex:1">
-    ${m.category?`<div style="font-size:9px;font-weight:800;color:#9C27B0;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">${esc(m.category)}</div>`:''}
-    <div class="tile-t" style="color:${isManual?'#9C27B0':'var(--warn)'}">${m.locName||'Allgemein'}</div>
-    ${m.area?`<div class="tile-sub">${esc(m.area)}</div>`:''}
-    <div style="margin-top:4px;font-size:13px">${esc(m.issue)}</div>
-    ${m.notes?`<div class="tile-sub">📝 ${esc(m.notes)}</div>`:''}
-    <div class="tile-sub">${new Date(m.date).toLocaleDateString('de-CH')}</div></div>
-    <button class="btn btn-sm btn-o" style="color:var(--primary);flex-shrink:0" onclick="resolveMat('${m.id}')">✓</button></div></div>`}).join(''):'<div class="empty"><div class="empty-i">✅</div><div class="empty-t">Alles erledigt!</div></div>';
-  const ds=document.getElementById('matDoneSec');if(dn.length){ds.style.display='block';document.getElementById('matDone').innerHTML=dn.map(m=>`<div class="tile mat-card resolved"><div class="tile-sub">${m.locName||'Allgemein'} — ${esc(m.issue)}</div></div>`).join('')}else{ds.style.display='none'}
+  const op=DB.material.filter(m=>!m.resolved);
+  const dn=DB.material.filter(m=>m.resolved);
+
+  // Group open items by area → location
+  const groups={};
+  op.forEach(m=>{
+    const aKey=m.area||'Allgemein';
+    const lKey=m.locName||'Allgemein';
+    if(!groups[aKey])groups[aKey]={};
+    if(!groups[aKey][lKey])groups[aKey][lKey]=[];
+    groups[aKey][lKey].push(m);
+  });
+
+  const openEl=document.getElementById('matOpen');
+  if(!op.length){
+    openEl.innerHTML='<div class="empty"><div class="empty-i">✅</div><div class="empty-t">Alles erledigt!</div></div>';
+  }else{
+    openEl.innerHTML=Object.entries(groups).map(([area,locs])=>`
+      <div style="margin-bottom:.75rem">
+        <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--primary);padding:6px 0 4px;border-bottom:2px solid var(--primary-light)">${esc(area)}</div>
+        ${Object.entries(locs).map(([locName,items])=>`
+          <div style="margin:6px 0 8px 0">
+            ${locName!=='Allgemein'?`<div style="font-size:12px;font-weight:700;padding:4px 0;display:flex;align-items:center;gap:5px"><span style="color:var(--on-sv)">📍</span>${esc(locName)}</div>`:''}
+            ${items.map(m=>`
+              <div class="tile mat-card${m.manual?' mat-manual':''}" style="margin-bottom:4px">
+                <div style="display:flex;gap:10px;align-items:flex-start">
+                  <div style="flex:1">
+                    ${m.category?`<div style="font-size:9px;font-weight:800;color:${m.manual?'#9C27B0':'var(--warn)'};text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">${esc(m.category)}</div>`:''}
+                    <div style="font-size:13px">${esc(m.issue)}</div>
+                    ${m.notes?`<div class="tile-sub">📝 ${esc(m.notes)}</div>`:''}
+                    <div class="tile-sub">${new Date(m.date).toLocaleDateString('de-CH')}</div>
+                  </div>
+                  <div class="chk" onclick="toggleMat('${m.id}')" title="Als erledigt markieren" style="flex-shrink:0;margin-top:2px"></div>
+                </div>
+              </div>`).join('')}
+          </div>`).join('')}
+      </div>`).join('');
+  }
+
+  // Resolved — grouped, compact, with undo ↩
+  const ds=document.getElementById('matDoneSec');
+  if(dn.length){
+    ds.style.display='block';
+    const dg={};
+    dn.forEach(m=>{const k=m.area||'Allgemein';if(!dg[k])dg[k]=[];dg[k].push(m)});
+    document.getElementById('matDone').innerHTML=Object.entries(dg).map(([area,items])=>`
+      <div style="margin-bottom:.5rem">
+        <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--on-sv);padding:4px 0">${esc(area)}</div>
+        ${items.map(m=>`
+          <div class="tile mat-card resolved" style="margin-bottom:4px">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+              <div style="font-size:12px;color:var(--on-sv)">${m.locName?esc(m.locName)+' — ':''}<span style="color:var(--on-s)">${esc(m.issue)}</span></div>
+              <button class="btn btn-sm btn-o" style="flex-shrink:0;font-size:10px;padding:3px 8px" onclick="toggleMat('${m.id}')" title="Rückgängig">↩ Offen</button>
+            </div>
+          </div>`).join('')}
+      </div>`).join('');
+  }else{ds.style.display='none'}
 }
+function toggleMat(id){DB.material=DB.material.map(m=>m.id===id?{...m,resolved:!m.resolved}:m);saveLocal();renderMat()}
 function resolveMat(id){DB.material=DB.material.map(m=>m.id===id?{...m,resolved:true}:m);saveLocal();renderMat()}
 function clearMat(){DB.material=DB.material.filter(m=>!m.resolved);saveLocal();renderMat()}
 
