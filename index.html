@@ -199,7 +199,15 @@ const battAge=(dateStr)=>{
   const label=days===0?'Heute':days===1?'Gestern':days<30?`${days}d`:days<365?`${Math.round(days/30)}Mt`:`${Math.round(days/365)}J`;
   return{date,days,label,color};
 };
-// batteryChangeDates: { deviceId: isoDate } stored on location
+// CH1903 LV03 conversion (swisstopo approximation formulas)
+const toLV03=(lat,lng)=>{
+  if(!lat||!lng)return null;
+  const latSec=parseFloat(lat)*3600, lngSec=parseFloat(lng)*3600;
+  const latAux=(latSec-169028.66)/10000, lngAux=(lngSec-26782.5)/10000;
+  const Y=Math.round(600072.37+211455.93*lngAux-10938.51*lngAux*latAux-0.36*lngAux*Math.pow(latAux,2)-44.54*Math.pow(lngAux,3));
+  const X=Math.round(200147.07+308807.95*latAux+3745.25*Math.pow(lngAux,2)+76.63*Math.pow(latAux,2)-194.56*Math.pow(lngAux,2)*latAux+119.79*Math.pow(latAux,3));
+  return{Y,X};
+};
 const devBattDate=(loc,devId)=>{
   const dates=loc.batteryChangeDates||{};
   // fallback: old single lastBatteryChange if no per-device data yet
@@ -575,7 +583,7 @@ function renderAreas(){
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-weight:500">${esc(loc.name)} <span class="status-badge status-${st}">${locStatusLabel(st)}</span></div>
       ${loc.town?`<div class="tile-sub">📍 ${esc(loc.town)}</div>`:''}
       ${loc.notes?`<div class="tile-sub" style="font-style:italic">💬 ${esc(loc.notes)}</div>`:''}
-      ${loc.lat&&loc.lng?`<div class="tile-sub" style="font-family:monospace;font-size:10px"><span class="coord-label">WGS84</span> ${esc(loc.lat)}, ${esc(loc.lng)}</div>`:''}
+      ${(()=>{if(!loc.lat||!loc.lng)return'';const lv=toLV03(loc.lat,loc.lng);return`<div class="tile-sub" style="font-family:monospace;font-size:10px"><span class="coord-label">WGS84</span> ${esc(loc.lat)}, ${esc(loc.lng)}</div>${lv?`<div class="tile-sub" style="font-family:monospace;font-size:10px"><span class="coord-label">LV03</span> Y ${lv.Y.toLocaleString('de-CH')}, X ${lv.X.toLocaleString('de-CH')}</div>`:''}`;})()} 
       ${ld.length?ld.map(a=>'<div class="tile-sub">📷 '+(a.qty>1?a.qty+'× ':'')+esc(devLabel(a.dev))+(a.dev.serial?' <span style="font-family:monospace;font-size:9px">('+esc(a.dev.serial)+')</span>':'')+'</div>').join(''):'<div class="tile-sub"><span style="color:var(--warn)">⚠️ Kein Gerät</span></div>'}
       ${(()=>{const battDevs=ld.filter(a=>a.dev.batteries&&a.dev.batteries.length>0);return battDevs.length?'<div style="margin-top:4px">'+battDevs.map(a=>{
         const dateStr=devBattDate(loc,a.dev.id);const ba=battAge(dateStr);
@@ -1193,7 +1201,7 @@ function showPhoto(locId,idx){
   const nav=photos.length>1?`<div style="color:rgba(255,255,255,.5);font-size:11px;margin-bottom:8px">Foto ${(idx||0)+1} von ${photos.length}</div>`:'';
   ov.innerHTML=`<div style="color:#fff;font-weight:700;margin-bottom:6px;font-size:14px">${esc(loc.name)}</div>
     ${loc.town?`<div style="color:rgba(255,255,255,.6);font-size:12px;margin-bottom:4px">📍 ${esc(loc.town)}</div>`:''}
-    ${loc.lat&&loc.lng?`<div style="color:rgba(255,255,255,.5);font-size:10px;font-family:monospace;margin-bottom:8px">WGS84: ${esc(loc.lat)}, ${esc(loc.lng)}</div>`:''}
+    ${loc.lat&&loc.lng?`<div style="color:rgba(255,255,255,.5);font-size:10px;font-family:monospace;margin-bottom:8px">WGS84: ${esc(loc.lat)}, ${esc(loc.lng)}${(()=>{const lv=toLV03(loc.lat,loc.lng);return lv?'<br>LV03: Y '+lv.Y.toLocaleString('de-CH')+', X '+lv.X.toLocaleString('de-CH'):''})()}</div>`:''}
     ${nav}
     <img src="${p}" style="max-width:100%;max-height:70vh;border-radius:8px">
     ${photos.length>1?`<div style="display:flex;gap:8px;margin-top:10px">${photos.map((_,i)=>`<div onclick="event.stopPropagation();ov_replace('${locId}',${i})" style="width:${i===idx?'10':'7'}px;height:${i===idx?'10':'7'}px;border-radius:50%;background:${i===idx?'white':'rgba(255,255,255,.4)'}"></div>`).join('')}</div>`:''}
