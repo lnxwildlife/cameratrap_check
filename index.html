@@ -144,6 +144,8 @@ nav{position:fixed;bottom:0;width:100%;background:rgba(255,255,255,.95);backdrop
     <div id="scriptUrlDisplay" style="flex:1;font-size:11px;color:var(--on-sv);font-family:monospace;word-break:break-all"></div>
     <button class="btn btn-sm btn-o" onclick="resetScriptUrl()">Ändern</button>
   </div>
+  <div class="fl mt-3">Datensicherung</div>
+  <div style="font-size:11px;color:var(--on-sv);line-height:1.6">Jeder Sync erstellt automatisch eine neue Version im Google Sheets Versionsverlauf. Frühere Versionen können über <strong>Datei → Versionsverlauf → Versionsverlauf anzeigen</strong> wiederhergestellt werden.</div>
 </section>
 </div>
 <div class="page" id="page-areas"><section><div class="sec-head"><div class="sec-title"><span class="sec-icon">🗺️</span> Gebiete & Standorte</div><button class="btn btn-sm btn-o" onclick="openModal('area')">+ Gebiet</button></div><div id="areaList"></div></section></div>
@@ -158,7 +160,19 @@ nav{position:fixed;bottom:0;width:100%;background:rgba(255,255,255,.95);backdrop
   <div id="matDone"></div>
 </section>
 </div>
-<div class="page" id="page-history"><section><div class="sec-head"><div class="sec-title"><span class="sec-icon">📊</span> Check-History</div></div><div id="histList"></div></section></div>
+<div class="page" id="page-history">
+<section>
+  <div class="sec-head">
+    <div class="sec-title"><span class="sec-icon">📊</span> Verlauf & Status</div>
+    <div style="display:flex;gap:6px">
+      <button id="histTabVerlauf" class="btn btn-sm btn-p" onclick="setHistTab('verlauf')">Verlauf</button>
+      <button id="histTabStatus" class="btn btn-sm btn-o" onclick="setHistTab('status')">Standort-Status</button>
+    </div>
+  </div>
+  <div id="histVerlauf"><div id="histList"></div></div>
+  <div id="histStatus" style="display:none"><div id="standortStatus"></div></div>
+</section>
+</div>
 </div>
 
 <!-- MODAL -->
@@ -862,10 +876,21 @@ function resolveMat(id){DB.material=DB.material.map(m=>m.id===id?{...m,resolved:
 function clearMat(){DB.material=DB.material.filter(m=>!m.resolved);saveLocal();renderMat()}
 
 // ═══════════════ HISTORY ═══════════════
+let _histTab='verlauf';
+function setHistTab(tab){
+  _histTab=tab;
+  document.getElementById('histVerlauf').style.display=tab==='verlauf'?'block':'none';
+  document.getElementById('histStatus').style.display=tab==='status'?'block':'none';
+  document.getElementById('histTabVerlauf').className='btn btn-sm '+(tab==='verlauf'?'btn-p':'btn-o');
+  document.getElementById('histTabStatus').className='btn btn-sm '+(tab==='status'?'btn-p':'btn-o');
+  if(tab==='status')renderStandortStatus();
+}
 function renderHist(){
+  setHistTab(_histTab);
   const el=document.getElementById('histList');
   if(!DB.history.length){el.innerHTML='<div class="empty"><div class="empty-i">📊</div><div class="empty-t">Noch keine Checks</div></div>';return}
-  el.innerHTML=DB.history.map(h=>`<div class="tile">
+  const sorted=[...DB.history].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  el.innerHTML=sorted.map(h=>`<div class="tile">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <span class="tile-t" style="color:var(--primary)">${new Date(h.date).toLocaleDateString('de-CH')}</span>
       <div style="display:flex;align-items:center;gap:6px">
@@ -892,6 +917,103 @@ function renderHist(){
   el.innerHTML+=`<div class="mt-3"><button class="btn btn-sm btn-d w-full" onclick="if(confirm('Alle Checks löschen?')){DB.history=[];saveLocal();renderHist()}">Alle löschen</button></div>`;
 }
 function delHistEntry(id){if(!confirm('Diesen Check löschen?'))return;DB.history=DB.history.filter(h=>h.id!==id);saveLocal();renderHist()}
+
+// ═══════════════ STANDORT-ÜBERSICHT ═══════════════
+function renderStandortStatus(){
+  const el=document.getElementById('standortStatus');
+  const locs=(DB.locations||[]).filter(l=>(l.status||'active')==='active');
+  if(!locs.length){el.innerHTML='<div class="empty"><div class="empty-i">📍</div><div class="empty-t">Keine aktiven Standorte</div></div>';return}
+
+  // Build last-check lookup from history
+  const lastCheckByLoc={};
+  const lastBattByLocDev={};
+  (DB.history||[]).forEach(h=>{
+    (h.locLogs||[]).forEach(ll=>{
+      const locId=ll.locId||null;
+      if(!locId)return;
+      if(!lastCheckByLoc[locId]||new Date(h.date)>new Date(lastCheckByLoc[locId]))lastCheckByLoc[locId]=h.date;
+      (ll.battChanged||[]).forEach(devLabel=>{
+        const key=locId+'|'+devLabel;
+        if(!lastBattByLocDev[key]||new Date(h.date)>new Date(lastBattByLocDev[key]))lastBattByLocDev[key]=h.date;
+      });
+    });
+  });
+
+  const now=new Date();
+  const daysSince=(dateStr)=>{if(!dateStr)return null;return Math.floor((now-new Date(dateStr))/(1000*60*60*24))};
+
+  const areaName=(id)=>{const a=(DB.areas||[]).find(x=>x.id===id);return a?a.name:''};
+  const devLabel=(d)=>d.name||[d.manufacturer,d.model].filter(Boolean).join(' ')||'Unbenannt';
+
+  // Group by area
+  const areaMap={};
+  locs.forEach(loc=>{
+    const aName=areaName(loc.areaId)||'Ohne Gebiet';
+    if(!areaMap[aName])areaMap[aName]=[];
+    areaMap[aName].push(loc);
+  });
+  const locAssign=(loc)=>{
+    if(loc.deviceAssignments)return loc.deviceAssignments;
+    const ids=loc.deviceIds||(loc.deviceId?[loc.deviceId]:[]);
+    return ids.filter(Boolean).map(id=>({deviceId:id,qty:1}));
+  };
+
+  const ageBand=(days)=>{
+    if(days===null)return{color:'#757575',bg:'#f5f5f5',label:'Nie geprüft'};
+    if(days<=30)return{color:'#2E7D32',bg:'rgba(76,175,80,.1)',label:days+'d'};
+    if(days<=60)return{color:'#E65100',bg:'rgba(255,152,0,.12)',label:days+'d'};
+    return{color:'#B71C1C',bg:'rgba(244,67,54,.1)',label:days+'d !'};
+  };
+
+  let html='';
+  Object.entries(areaMap).sort(([a],[b])=>a.localeCompare(b,'de')).forEach(([area,aLocs])=>{
+    html+=`<div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--primary);letter-spacing:.06em;padding:12px 0 4px;border-top:2px solid var(--primary-light);margin-top:4px">${esc(area)}</div>`;
+    aLocs.sort((a,b)=>a.name.localeCompare(b.name,'de')).forEach(loc=>{
+      const lastChk=lastCheckByLoc[loc.id]||loc.lastChecked||null;
+      const days=daysSince(lastChk);
+      const band=ageBand(days);
+      const assigns=locAssign(loc);
+      const devs=(DB.devices||[]);
+
+      // Per-device battery info
+      const battLines=assigns.map(a=>{
+        const d=devs.find(x=>x.id===a.deviceId);
+        if(!d)return null;
+        const dl=devLabel(d);
+        // Try to find last battery change from history locLogs
+        const key=loc.id+'|'+dl;
+        const battDate=lastBattByLocDev[key]||loc.batteryChangeDates?.[a.deviceId]||loc.lastBatteryChange||null;
+        const battDays=daysSince(battDate);
+        const battBand=battDays===null?{color:'#757575',label:'?'}:battDays>180?{color:'#B71C1C',label:battDays+'d ⚠'}:battDays>90?{color:'#E65100',label:battDays+'d'}:{color:'#2E7D32',label:battDays+'d'};
+        return `<div style="font-size:10px;color:var(--on-sv);margin-top:2px">🔋 <span style="color:${battBand.color}">${battBand.label}</span> ${esc(dl)}</div>`;
+      }).filter(Boolean).join('');
+
+      html+=`<div class="tile" style="margin-bottom:6px;padding:.7rem">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(loc.name)}</div>
+            ${loc.town?`<div style="font-size:10px;color:var(--on-sv)">${esc(loc.town)}</div>`:''}
+            ${battLines}
+          </div>
+          <div style="flex-shrink:0;text-align:center">
+            <div style="font-size:11px;font-weight:800;color:${band.color};background:${band.bg};padding:4px 10px;border-radius:8px;white-space:nowrap">${band.label}</div>
+            <div style="font-size:9px;color:var(--on-sv);margin-top:2px">${lastChk?new Date(lastChk).toLocaleDateString('de-CH',{day:'2-digit',month:'2-digit',year:'2-digit'}):'–'}</div>
+          </div>
+        </div>
+      </div>`;
+    });
+  });
+
+  // Legend
+  html+=`<div style="margin-top:12px;padding:10px;background:var(--sf2);border-radius:.5rem;font-size:10px;color:var(--on-sv);display:flex;gap:16px;flex-wrap:wrap">
+    <span style="color:#2E7D32;font-weight:700">● ≤30d</span>
+    <span style="color:#E65100;font-weight:700">● 31–60d</span>
+    <span style="color:#B71C1C;font-weight:700">● &gt;60d !</span>
+    <span style="color:#757575;font-weight:700">● Nie geprüft</span>
+  </div>`;
+
+  el.innerHTML=html;
+}
 
 // ═══════════════ MODALS ═══════════════
 function openModal(type,data,extra){
